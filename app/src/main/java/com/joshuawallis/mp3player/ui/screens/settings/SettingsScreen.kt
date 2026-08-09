@@ -1,0 +1,148 @@
+package com.joshuawallis.mp3player.ui.screens.settings
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.documentfile.provider.DocumentFile
+import com.joshuawallis.mp3player.playback.PlaybackMode
+import com.joshuawallis.mp3player.playback.PlaybackViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    rootFolderUri: Uri?,
+    onRootFolderChosen: (Uri) -> Unit,
+    whiteNoiseUri: Uri?,
+    onWhiteNoiseChosen: (Uri) -> Unit,
+    playbackViewModel: PlaybackViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val uiState by playbackViewModel.uiState.collectAsState()
+    val whiteNoisePlaying = uiState.mode == PlaybackMode.WHITE_NOISE && uiState.isPlaying
+
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            onRootFolderChosen(uri)
+        }
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            onWhiteNoiseChosen(uri)
+        }
+    }
+
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(innerPadding)
+                .padding(16.dp)
+        ) {
+            Text("White Noise", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { filePickerLauncher.launch(arrayOf("audio/*")) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = whiteNoiseUri?.let { singleDocumentName(context, it) } ?: "Select File",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Button(
+                    onClick = { playbackViewModel.toggleWhiteNoise(whiteNoiseUri) },
+                    colors = if (whiteNoisePlaying) {
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary,
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        ButtonDefaults.buttonColors()
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (whiteNoisePlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = "Play or pause white noise"
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            Text("Root Folder", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { folderPickerLauncher.launch(null) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = rootFolderUri?.let { treeDocumentName(context, it) } ?: "Select Folder",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun treeDocumentName(context: Context, treeUri: Uri): String =
+    DocumentFile.fromTreeUri(context, treeUri)?.name.orEmpty()
+
+private fun singleDocumentName(context: Context, uri: Uri): String =
+    DocumentFile.fromSingleUri(context, uri)?.name.orEmpty()
