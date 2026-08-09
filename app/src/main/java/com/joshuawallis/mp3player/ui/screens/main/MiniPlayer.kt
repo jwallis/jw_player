@@ -70,7 +70,14 @@ fun MiniPlayer(
                 .basicMarquee()
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
+
+        Text(
+            text = formatTime(uiState.positionMs),
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Spacer(Modifier.height(4.dp))
 
         val progress = if (uiState.durationMs > 0) {
             (uiState.positionMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
@@ -123,6 +130,13 @@ fun MiniPlayer(
             }
         }
     }
+}
+
+private fun formatTime(ms: Long): String {
+    val totalSeconds = (ms / 1000).coerceAtLeast(0)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
 }
 
 @Composable

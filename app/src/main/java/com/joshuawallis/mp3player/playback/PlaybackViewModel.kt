@@ -69,6 +69,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private fun refreshPosition() {
+        val duration = player.duration.takeIf { it > 0 } ?: 0L
+        _uiState.update { it.copy(positionMs = player.currentPosition, durationMs = duration) }
+    }
+
     /** Called when a file is tapped in the Library browser. [siblings] is every playable file in that folder, sorted. */
     fun playLibraryFile(file: DocumentFile, siblings: List<DocumentFile>) {
         libraryQueue = siblings
@@ -94,6 +99,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         } else {
             player.seekTo(0)
             player.play()
+            refreshPosition()
         }
     }
 
@@ -122,9 +128,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     player.seekTo(0)
                     player.volume = 1f
                     player.play()
+                    refreshPosition()
                     true
                 } else {
                     player.seekTo(target)
+                    refreshPosition()
                     false
                 }
             }
@@ -136,6 +144,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     true
                 } else {
                     player.seekTo(target)
+                    refreshPosition()
                     false
                 }
             }
@@ -147,11 +156,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
         player.volume = 1f
         player.play()
+        refreshPosition()
     }
 
     fun seekTo(positionMs: Long) {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
         player.seekTo(positionMs)
+        refreshPosition()
     }
 
     fun playWhiteNoise(uri: Uri) {
@@ -187,6 +198,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             else -> {
                 player.stop()
                 _uiState.update { it.copy(mode = PlaybackMode.NONE) }
+                refreshPosition()
             }
         }
     }
@@ -210,6 +222,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 artist = artist
             )
         }
+        refreshPosition()
     }
 
     override fun onCleared() {
