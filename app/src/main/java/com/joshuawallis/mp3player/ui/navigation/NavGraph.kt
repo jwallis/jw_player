@@ -1,5 +1,6 @@
 package com.joshuawallis.mp3player.ui.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,9 @@ fun AppNavHost(
 
     NavHost(navController = navController, startDestination = Route.MAIN) {
         composable(Route.MAIN) {
+            BackHandler(enabled = currentFolderDoc?.uri != rootFolderDoc?.uri) {
+                currentFolderDoc?.parentFile?.let { currentFolderDoc = it }
+            }
             MainScreen(
                 rootFolderDoc = rootFolderDoc,
                 currentFolderDoc = currentFolderDoc,

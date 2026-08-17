@@ -3,9 +3,9 @@ package com.joshuawallis.mp3player.ui.screens.main
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
@@ -33,8 +33,8 @@ fun MainScreen(
     val uiState by playbackViewModel.uiState.collectAsState()
 
     Column(modifier = modifier.fillMaxSize().safeDrawingPadding()) {
-        Spacer(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.1f))
-        Box(modifier = Modifier.weight(2f).fillMaxSize()) {
+        Spacer(modifier = Modifier.fillMaxWidth().height(8.dp))
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             LibraryBrowser(
                 rootFolderDoc = rootFolderDoc,
                 currentFolderDoc = currentFolderDoc,
@@ -62,9 +62,7 @@ fun MainScreen(
             onBeginHoldSeek = playbackViewModel::beginHoldSeek,
             onHoldSeekTick = playbackViewModel::applyHoldSeekTick,
             onEndHoldSeekNormally = playbackViewModel::endHoldSeekNormally,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxSize()
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

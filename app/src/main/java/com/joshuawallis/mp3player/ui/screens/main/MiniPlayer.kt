@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joshuawallis.mp3player.playback.PlaybackUiState
 import com.joshuawallis.mp3player.playback.SeekDirection
@@ -74,7 +75,9 @@ fun MiniPlayer(
 
         Text(
             text = formatTime(uiState.positionMs),
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(4.dp))
