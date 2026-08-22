@@ -31,7 +31,7 @@ data class PlaybackUiState(
 )
 
 private const val HOLD_SEEK_TICK_MS = 30L
-private const val HOLD_SEEK_MULTIPLIER = 3
+private const val HOLD_SEEK_MULTIPLIER = 6
 private const val RESTART_THRESHOLD_MS = 3_000L
 private const val POSITION_TICK_MS = 200L
 
