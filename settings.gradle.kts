@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "mp3player"
+rootProject.name = "jwplayer"
 include(":app")

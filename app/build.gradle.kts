@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.joshuawallis.mp3player"
+    namespace = "com.joshuawallis.jwplayer"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.joshuawallis.mp3player"
+        applicationId = "com.joshuawallis.jwplayer"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

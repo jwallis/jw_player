@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.playback
+package com.joshuawallis.jwplayer.playback
 
 import android.content.Context
 import android.media.MediaMetadataRetriever

@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.ui.navigation
+package com.joshuawallis.jwplayer.ui.navigation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
@@ -12,10 +12,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.joshuawallis.mp3player.data.SettingsRepository
-import com.joshuawallis.mp3player.playback.PlaybackViewModel
-import com.joshuawallis.mp3player.ui.screens.main.MainScreen
-import com.joshuawallis.mp3player.ui.screens.settings.SettingsScreen
+import com.joshuawallis.jwplayer.data.SettingsRepository
+import com.joshuawallis.jwplayer.playback.PlaybackViewModel
+import com.joshuawallis.jwplayer.ui.screens.main.MainScreen
+import com.joshuawallis.jwplayer.ui.screens.settings.SettingsScreen
 
 object Route {
     const val MAIN = "main"

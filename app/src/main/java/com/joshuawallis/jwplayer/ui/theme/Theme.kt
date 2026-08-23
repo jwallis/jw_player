@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.ui.theme
+package com.joshuawallis.jwplayer.ui.theme
 
 import android.app.Activity
 import android.os.Build

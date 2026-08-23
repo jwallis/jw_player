@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player
+package com.joshuawallis.jwplayer
 
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
@@ -28,10 +28,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.joshuawallis.mp3player.data.SettingsRepository
-import com.joshuawallis.mp3player.playback.PlaybackViewModel
-import com.joshuawallis.mp3player.ui.navigation.AppNavHost
-import com.joshuawallis.mp3player.ui.theme.Mp3playerTheme
+import com.joshuawallis.jwplayer.data.SettingsRepository
+import com.joshuawallis.jwplayer.playback.PlaybackViewModel
+import com.joshuawallis.jwplayer.ui.navigation.AppNavHost
+import com.joshuawallis.jwplayer.ui.theme.Mp3playerTheme
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {

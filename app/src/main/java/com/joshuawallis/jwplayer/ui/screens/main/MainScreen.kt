@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.ui.screens.main
+package com.joshuawallis.jwplayer.ui.screens.main
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
-import com.joshuawallis.mp3player.playback.PlaybackViewModel
+import com.joshuawallis.jwplayer.playback.PlaybackViewModel
 
 @Composable
 fun MainScreen(

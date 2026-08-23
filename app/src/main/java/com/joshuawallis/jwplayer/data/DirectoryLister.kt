@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.data
+package com.joshuawallis.jwplayer.data
 
 import androidx.documentfile.provider.DocumentFile
 

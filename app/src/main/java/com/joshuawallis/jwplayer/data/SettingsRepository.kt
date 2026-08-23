@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.data
+package com.joshuawallis.jwplayer.data
 
 import android.content.Context
 import android.net.Uri

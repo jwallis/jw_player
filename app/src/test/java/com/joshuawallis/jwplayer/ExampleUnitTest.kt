@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player
+package com.joshuawallis.jwplayer
 
 import org.junit.Test
 

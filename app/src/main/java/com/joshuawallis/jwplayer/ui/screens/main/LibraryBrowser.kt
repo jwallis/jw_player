@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.ui.screens.main
+package com.joshuawallis.jwplayer.ui.screens.main
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
@@ -10,10 +10,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.documentfile.provider.DocumentFile
-import com.joshuawallis.mp3player.data.AUDIO_EXTENSIONS
-import com.joshuawallis.mp3player.data.DirectoryLister
-import com.joshuawallis.mp3player.data.DirectoryListing
-import com.joshuawallis.mp3player.ui.components.FolderListView
+import com.joshuawallis.jwplayer.data.AUDIO_EXTENSIONS
+import com.joshuawallis.jwplayer.data.DirectoryLister
+import com.joshuawallis.jwplayer.data.DirectoryListing
+import com.joshuawallis.jwplayer.ui.components.FolderListView
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
