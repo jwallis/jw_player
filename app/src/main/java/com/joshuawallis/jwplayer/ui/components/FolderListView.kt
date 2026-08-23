@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.ui.components
+package com.joshuawallis.jwplayer.ui.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -28,10 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
-import com.joshuawallis.mp3player.data.DirectoryLister
-import com.joshuawallis.mp3player.data.DirectoryListing
+import com.joshuawallis.jwplayer.data.DirectoryLister
+import com.joshuawallis.jwplayer.data.DirectoryListing
 
 private val ROW_HEIGHT = 48.dp
 
@@ -54,6 +56,7 @@ fun FolderListView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onBackClick)
+                    .semantics { contentDescription = "folder $backLabel" }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -68,6 +71,7 @@ fun FolderListView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onFolderClick(folder) }
+                            .semantics { contentDescription = "folder ${folder.name.orEmpty()}" }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -85,6 +89,7 @@ fun FolderListView(
                             .fillMaxWidth()
                             .background(background)
                             .clickable { onFileClick(file) }
+                            .semantics { contentDescription = "file ${DirectoryLister.displayName(file)}" }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -98,12 +103,14 @@ fun FolderListView(
             if (listState.canScrollBackward) {
                 ScrollEdgeIndicator(
                     icon = Icons.Filled.KeyboardArrowUp,
+                    description = "More folders or files above",
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
             if (listState.canScrollForward) {
                 ScrollEdgeIndicator(
                     icon = Icons.Filled.KeyboardArrowDown,
+                    description = "More folders or files below",
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
@@ -112,7 +119,7 @@ fun FolderListView(
 }
 
 @Composable
-private fun ScrollEdgeIndicator(icon: ImageVector, modifier: Modifier = Modifier) {
+private fun ScrollEdgeIndicator(icon: ImageVector, description: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -121,6 +128,6 @@ private fun ScrollEdgeIndicator(icon: ImageVector, modifier: Modifier = Modifier
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Icon(icon, contentDescription = null)
+        Icon(icon, contentDescription = description)
     }
 }

@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.ui.screens.settings
+package com.joshuawallis.jwplayer.ui.screens.settings
 
 import android.content.Context
 import android.content.Intent
@@ -30,11 +30,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
-import com.joshuawallis.mp3player.playback.PlaybackMode
-import com.joshuawallis.mp3player.playback.PlaybackViewModel
+import com.joshuawallis.jwplayer.playback.PlaybackMode
+import com.joshuawallis.jwplayer.playback.PlaybackViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,12 +96,17 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                val whiteNoiseFileName = whiteNoiseUri?.let { singleDocumentName(context, it) }
                 Button(
                     onClick = { filePickerLauncher.launch(arrayOf("audio/*")) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics {
+                            contentDescription = whiteNoiseFileName?.let { "file $it" } ?: "Select white noise file"
+                        }
                 ) {
                     Text(
-                        text = whiteNoiseUri?.let { singleDocumentName(context, it) } ?: "Select File",
+                        text = whiteNoiseFileName ?: "Select File",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -118,7 +125,7 @@ fun SettingsScreen(
                 ) {
                     Icon(
                         imageVector = if (whiteNoisePlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = "Play or pause white noise"
+                        contentDescription = if (whiteNoisePlaying) "Pause white noise" else "Play white noise"
                     )
                 }
             }
@@ -127,12 +134,17 @@ fun SettingsScreen(
 
             Text("Root Folder", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
+            val rootFolderName = rootFolderUri?.let { treeDocumentName(context, it) }
             Button(
                 onClick = { folderPickerLauncher.launch(null) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = rootFolderName?.let { "folder $it" } ?: "Select root folder"
+                    }
             ) {
                 Text(
-                    text = rootFolderUri?.let { treeDocumentName(context, it) } ?: "Select Folder",
+                    text = rootFolderName ?: "Select Folder",
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

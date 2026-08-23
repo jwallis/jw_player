@@ -1,4 +1,4 @@
-package com.joshuawallis.mp3player.ui.screens.main
+package com.joshuawallis.jwplayer.ui.screens.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -37,10 +37,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.joshuawallis.mp3player.playback.PlaybackUiState
-import com.joshuawallis.mp3player.playback.SeekDirection
+import com.joshuawallis.jwplayer.playback.PlaybackUiState
+import com.joshuawallis.jwplayer.playback.SeekDirection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -68,16 +72,20 @@ fun MiniPlayer(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .fillMaxWidth()
+                .semantics { contentDescription = "Now playing: $titleLine" }
                 .basicMarquee()
         )
 
         Spacer(Modifier.height(4.dp))
 
+        val elapsed = formatTime(uiState.positionMs)
         Text(
-            text = formatTime(uiState.positionMs),
+            text = elapsed,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "Elapsed time $elapsed" }
         )
 
         Spacer(Modifier.height(4.dp))
@@ -115,7 +123,7 @@ fun MiniPlayer(
             IconButton(onClick = onTogglePlayPause) {
                 Icon(
                     imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = "Play or pause"
+                    contentDescription = if (uiState.isPlaying) "Pause" else "Play"
                 )
             }
 
@@ -154,6 +162,7 @@ private fun SeekBar(
     BoxWithConstraints(
         modifier = modifier
             .height(24.dp)
+            .semantics { contentDescription = "Seek bar" }
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     onSeek((offset.x / size.width.toFloat()).coerceIn(0f, 1f))
@@ -203,9 +212,14 @@ private fun HoldSeekButton(
     onEndNormally: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val description = contentDescription
     Box(
         modifier = Modifier
             .size(48.dp)
+            .semantics(mergeDescendants = true) {
+                this.contentDescription = description
+                role = Role.Button
+            }
             .pointerInput(direction) {
                 detectTapGestures(
                     onPress = {
@@ -235,6 +249,6 @@ private fun HoldSeekButton(
             },
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = contentDescription)
+        Icon(icon, contentDescription = null)
     }
 }
