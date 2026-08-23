@@ -16,3 +16,11 @@ duplicated here — just pointers to where to find/manage them.
   Automation/Flows. No Jira secrets vault was available on this plan, so this
   is not encrypted at rest - only exposure is anyone with edit access to that
   Flow.
+- **AWS access key/secret** for the `jw-player-ci` IAM user (AWS account
+  975669876094, region `us-east-2`) - stored locally in
+  `~/.aws/credentials` under the `jw-player-ci` profile
+  (`aws configure --profile jw-player-ci`). No permissions attached yet -
+  scoping deferred to Phase 7 (Device Farm integration). Not yet stored
+  anywhere in CI; will need to become a GitHub Actions secret (or be replaced
+  by OIDC federation) when Phase 7 actually wires up Device Farm calls from
+  GitHub Actions.
