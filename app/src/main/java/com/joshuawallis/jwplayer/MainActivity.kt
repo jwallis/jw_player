@@ -1,5 +1,7 @@
 package com.joshuawallis.jwplayer
 
+// comment for testing automated linter
+
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
