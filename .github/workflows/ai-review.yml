@@ -37,7 +37,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          current_sha=$(gh pr view "${{ steps.pr.outputs.number }}" --json headRefOid -q .headRefOid)
+          current_sha=$(gh pr view "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --json headRefOid -q .headRefOid)
           if [ "$current_sha" != "${{ steps.pr.outputs.sha }}" ]; then
             echo "PR has moved on since this run's SHA (${{ steps.pr.outputs.sha }} -> $current_sha) - skipping, a newer run will cover it"
             echo "stale=true" >> "$GITHUB_OUTPUT"
@@ -134,8 +134,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh pr review "${{ steps.pr.outputs.number }}" --approve --body "Approved by AI Code Review - no issues found."
-          gh pr merge "${{ steps.pr.outputs.number }}" --merge --delete-branch
+          gh pr review "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --approve --body "Approved by AI Code Review - no issues found."
+          gh pr merge "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --merge --delete-branch
 
       - name: Notify Slack (approved and merged)
         if: steps.verdict.outputs.verdict == 'APPROVE' && success()
