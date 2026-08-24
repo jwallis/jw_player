@@ -56,9 +56,12 @@ jobs:
         if: steps.staleness.outputs.stale == 'false'
         id: cap
         run: |
-          commit_count=$(git rev-list --count origin/main..HEAD)
-          # 1 implementation commit (Phase 1) + up to 1 AI-review fix commit
-          if [ "$commit_count" -gt 2 ]; then
+          # Count only commits *this workflow's own fix step* made (tagged
+          # with the [ai-review-fix] marker below), not total commits ahead
+          # of main - a branch can pick up unrelated commits (merges from
+          # main, multiple implementation commits) that aren't review cycles.
+          fix_commit_count=$(git log origin/main..HEAD --oneline --fixed-strings --grep='[ai-review-fix]' | wc -l | tr -d ' ')
+          if [ "$fix_commit_count" -ge 1 ]; then
             echo "capped=true" >> "$GITHUB_OUTPUT"
           else
             echo "capped=false" >> "$GITHUB_OUTPUT"
@@ -91,8 +94,11 @@ jobs:
               violations, missing error handling for reachable cases, etc.).
               Fix them directly, then run `./gradlew assembleDebug` and
               `./gradlew testDebugUnitTest` yourself and confirm both pass.
-              Commit your fix locally with a message describing what you
-              changed and why. Do NOT push - a later workflow step does that.
+              Commit your fix locally with a message that starts with the
+              literal text `[ai-review-fix] ` followed by a description of
+              what you changed and why (this exact marker is how the workflow
+              counts review cycles - do not omit or alter it). Do NOT push -
+              a later workflow step does that.
             - BLOCKED: you found a real problem but cannot safely fix it
               yourself (ambiguous requirement, missing context, would need a
               product decision, etc.). Make NO commit. Explain the problem on
