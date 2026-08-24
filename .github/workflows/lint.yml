@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Generate developer-bot token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.DEVELOPER_BOT_CLIENT_ID }}
           private-key: ${{ secrets.DEVELOPER_BOT_PRIVATE_KEY }}
