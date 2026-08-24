@@ -284,7 +284,7 @@ Fixed for that one branch by merging `main` in (a real 3-block conflict in
 `MainActivity.kt`, resolved by keeping the branch's actual feature content and
 pulling in `main`'s unrelated accessibility imports).
 
-## Phase 3 — built, not yet verified end-to-end
+## Phase 3 — complete, verified end-to-end
 
 `.github/workflows/ai-review.yml`. Design detail lives in the plan file; the
 one decision worth calling out here is the **verdict signal**. Phase 1 uses "did
@@ -305,14 +305,57 @@ loop and hands off to a human via Slack instead. On approval, merges with a real
 merge commit, not squash - explicit user preference, applies to every future
 auto-merge in this pipeline, not just this one.
 
-Not yet run against a real PR - next step is exercising it end-to-end the same
-way Phase 2 was (push to the reused JWP-2 branch, watch the run).
+**Live testing found a hard blocker, not a bug in the workflow logic:** GitHub
+rejects `gh pr review --approve` when the reviewer and the PR's author resolve
+to the same actor - and every workflow so far authenticated with the shared
+`github.token` (`github-actions[bot]`), so Phase 3's first real run failed with
+`Can not approve your own pull request`. Confirmed live that this isn't a
+branch-protection setting (this repo has none configured, and it still failed)
+- it's a platform-level rule on the review-submission API itself.
+
+**Fix: two dedicated GitHub Apps**, one per side of the review boundary -
+`jw-company-developer-bot` (Phase 1 implementation, Phase 2 lint autofixes) and
+`jw-company-reviewer-bot` (Phase 3 review/approve/merge) - so the PR's author
+and its reviewer are genuinely different accounts, visible as such in the PR
+history, not just different in workflow YAML. Each workflow mints a short-lived
+installation token via `actions/create-github-app-token`, fed the App's Client
+ID + private key (GitHub's current-recommended identifier over the numeric App
+ID - see `docs/config/config.md`), and uses it everywhere `github.token`
+previously touched checkout/push/`gh` commands. Commit-author identity was
+updated to match too, using GitHub's documented
+`<bot-user-id>+<slug>[bot]@users.noreply.github.com` format (the bot user's own
+ID, looked up via `gh api users/<slug>[bot]`, not the App ID) - otherwise
+commits would still show the old shared identity even though a different token
+pushed them. `ai-review.yml` was also missing a git identity step entirely
+(never needed one before, since it had never actually committed anything) -
+would have failed the first time the FIXED path tried to commit.
+
+**A second, real design bug found via live testing, not the auth one:** the
+iteration cap originally counted total commits ahead of `main`, not actual
+review cycles. The reused JWP-2 branch had 5 commits ahead of main purely from
+prior phase testing (merges, implementation) and tripped the cap before Claude
+ever ran. Fixed by having Claude tag fix commits with a literal
+`[ai-review-fix] ` message marker and counting only those.
+
+**Verified live, in order:** trigger fires correctly off `Lint`'s completion;
+staleness guard and (fixed) iteration cap both fire at the right moments; both
+bots mint tokens and act under their own identities; the FIXED path ran for
+real end-to-end - Claude found something to fix, the independent
+`assembleDebug`/`testDebugUnitTest` re-check passed, reviewer-bot pushed the
+fix commit, which correctly re-triggered `lint.yml` then `ai-review.yml` again,
+which correctly hit the iteration cap on that second pass and alerted Slack
+instead of looping forever. **Not yet observed live:** an `APPROVE` verdict
+actually reaching `gh pr review --approve` + `gh pr merge` - JWP-2 exhausted
+its one allowed fix cycle before producing a clean approval. The self-approval
+bug that motivated the two-bot design is structurally fixed (reviewer-bot is a
+genuinely different actor now), but the merge step itself will get its first
+live exercise the next time a PR needs no fixes.
 
 ## Status
 
-Phase 0, Phase 1, and Phase 2 are complete and verified end-to-end - a real Jira
-story (JWP-2) went through Phases 0-1 and produced a real, working PR
-(<https://github.com/jwallis/jw_player/pull/1>); Phase 2's lint workflow builds,
-tests, and `ktlintCheck` all pass against the newly-formatted codebase. Phase 3
-(AI code review) is built (`ai-review.yml`) but not yet exercised against a real
-PR - that's the next step before moving on.
+Phase 0, Phase 1, Phase 2, and Phase 3 are complete and verified end-to-end - a
+real Jira story (JWP-2) went through Phases 0-1 and produced a real, working PR
+(<https://github.com/jwallis/jw_player/pull/1>); Phase 2's lint workflow and
+Phase 3's AI review workflow (including the FIXED-path fix/push/re-trigger
+loop) both ran successfully against that same PR, under their own dedicated
+bot identities. Next up is Phase 4 (AI test case generation).
