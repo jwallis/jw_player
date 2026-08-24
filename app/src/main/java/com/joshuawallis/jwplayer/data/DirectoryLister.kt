@@ -6,25 +6,30 @@ val AUDIO_EXTENSIONS = setOf("mp3", "m4a", "wav")
 
 data class DirectoryListing(
     val folders: List<DocumentFile>,
-    val files: List<DocumentFile>
+    val files: List<DocumentFile>,
 )
 
 object DirectoryLister {
-
-    fun list(dir: DocumentFile, extensionFilter: Set<String>?, includeFiles: Boolean = true): DirectoryListing {
+    fun list(
+        dir: DocumentFile,
+        extensionFilter: Set<String>?,
+        includeFiles: Boolean = true,
+    ): DirectoryListing {
         val children = dir.listFiles()
 
-        val folders = children
-            .filter { it.isDirectory && !it.name.orEmpty().startsWith(".") }
-            .sortedBy { it.name.orEmpty().lowercase() }
-
-        val files = if (includeFiles) {
+        val folders =
             children
-                .filter { it.isFile && !it.name.orEmpty().startsWith(".") && matchesExtension(it, extensionFilter) }
+                .filter { it.isDirectory && !it.name.orEmpty().startsWith(".") }
                 .sortedBy { it.name.orEmpty().lowercase() }
-        } else {
-            emptyList()
-        }
+
+        val files =
+            if (includeFiles) {
+                children
+                    .filter { it.isFile && !it.name.orEmpty().startsWith(".") && matchesExtension(it, extensionFilter) }
+                    .sortedBy { it.name.orEmpty().lowercase() }
+            } else {
+                emptyList()
+            }
 
         return DirectoryListing(folders, files)
     }
@@ -33,9 +38,16 @@ object DirectoryLister {
 
     fun titleFromFileName(fileName: String): String = fileName.substringBeforeLast('.')
 
-    private fun matchesExtension(file: DocumentFile, extensionFilter: Set<String>?): Boolean {
+    private fun matchesExtension(
+        file: DocumentFile,
+        extensionFilter: Set<String>?,
+    ): Boolean {
         if (extensionFilter == null) return true
-        val extension = file.name.orEmpty().substringAfterLast('.', "").lowercase()
+        val extension =
+            file.name
+                .orEmpty()
+                .substringAfterLast('.', "")
+                .lowercase()
         return extension in extensionFilter
     }
 }

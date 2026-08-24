@@ -47,29 +47,31 @@ fun SettingsScreen(
     onWhiteNoiseChosen: (Uri) -> Unit,
     playbackViewModel: PlaybackViewModel,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val uiState by playbackViewModel.uiState.collectAsState()
     val whiteNoisePlaying = uiState.mode == PlaybackMode.WHITE_NOISE && uiState.isPlaying
 
-    val folderPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            onRootFolderChosen(uri)
+    val folderPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocumentTree(),
+        ) { uri ->
+            if (uri != null) {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                onRootFolderChosen(uri)
+            }
         }
-    }
 
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            onWhiteNoiseChosen(uri)
+    val filePickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            if (uri != null) {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                onWhiteNoiseChosen(uri)
+            }
         }
-    }
 
     Scaffold(
         modifier = modifier,
@@ -80,52 +82,55 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(innerPadding)
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(innerPadding)
+                    .padding(16.dp),
         ) {
             Text("White Noise", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val whiteNoiseFileName = whiteNoiseUri?.let { singleDocumentName(context, it) }
                 Button(
                     onClick = { filePickerLauncher.launch(arrayOf("audio/*")) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .semantics {
-                            contentDescription = whiteNoiseFileName?.let { "file $it" } ?: "Select white noise file"
-                        }
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .semantics {
+                                contentDescription = whiteNoiseFileName?.let { "file $it" } ?: "Select white noise file"
+                            },
                 ) {
                     Text(
                         text = whiteNoiseFileName ?: "Select File",
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
                 Button(
                     onClick = { playbackViewModel.toggleWhiteNoise(whiteNoiseUri) },
-                    colors = if (whiteNoisePlaying) {
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary,
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        ButtonDefaults.buttonColors()
-                    }
+                    colors =
+                        if (whiteNoisePlaying) {
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.onPrimary,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            ButtonDefaults.buttonColors()
+                        },
                 ) {
                     Icon(
                         imageVector = if (whiteNoisePlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (whiteNoisePlaying) "Pause white noise" else "Play white noise"
+                        contentDescription = if (whiteNoisePlaying) "Pause white noise" else "Play white noise",
                     )
                 }
             }
@@ -137,24 +142,29 @@ fun SettingsScreen(
             val rootFolderName = rootFolderUri?.let { treeDocumentName(context, it) }
             Button(
                 onClick = { folderPickerLauncher.launch(null) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics {
-                        contentDescription = rootFolderName?.let { "folder $it" } ?: "Select root folder"
-                    }
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            contentDescription = rootFolderName?.let { "folder $it" } ?: "Select root folder"
+                        },
             ) {
                 Text(
                     text = rootFolderName ?: "Select Folder",
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
     }
 }
 
-private fun treeDocumentName(context: Context, treeUri: Uri): String =
-    DocumentFile.fromTreeUri(context, treeUri)?.name.orEmpty()
+private fun treeDocumentName(
+    context: Context,
+    treeUri: Uri,
+): String = DocumentFile.fromTreeUri(context, treeUri)?.name.orEmpty()
 
-private fun singleDocumentName(context: Context, uri: Uri): String =
-    DocumentFile.fromSingleUri(context, uri)?.name.orEmpty()
+private fun singleDocumentName(
+    context: Context,
+    uri: Uri,
+): String = DocumentFile.fromSingleUri(context, uri)?.name.orEmpty()

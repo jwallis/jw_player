@@ -28,7 +28,7 @@ fun MainScreen(
     onFolderChange: (DocumentFile) -> Unit,
     playbackViewModel: PlaybackViewModel,
     onSettingsClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val uiState by playbackViewModel.uiState.collectAsState()
 
@@ -41,13 +41,14 @@ fun MainScreen(
                 onFolderChange = onFolderChange,
                 highlightedUri = uiState.currentFileUri,
                 onFilePlay = { file, siblings -> playbackViewModel.playLibraryFile(file, siblings) },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             )
             IconButton(
                 onClick = onSettingsClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
             ) {
                 Icon(Icons.Filled.Settings, contentDescription = "Settings")
             }
@@ -62,7 +63,7 @@ fun MainScreen(
             onBeginHoldSeek = playbackViewModel::beginHoldSeek,
             onHoldSeekTick = playbackViewModel::applyHoldSeekTick,
             onEndHoldSeekNormally = playbackViewModel::endHoldSeekNormally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

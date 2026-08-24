@@ -1,6 +1,5 @@
 package com.joshuawallis.jwplayer
 
-import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -33,13 +32,14 @@ import com.joshuawallis.jwplayer.playback.PlaybackViewModel
 import com.joshuawallis.jwplayer.ui.navigation.AppNavHost
 import com.joshuawallis.jwplayer.ui.theme.Mp3playerTheme
 import kotlinx.coroutines.delay
+import android.graphics.Color as AndroidColor
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(AndroidColor.BLACK),
-            navigationBarStyle = SystemBarStyle.dark(AndroidColor.BLACK)
+            navigationBarStyle = SystemBarStyle.dark(AndroidColor.BLACK),
         )
         setContent {
             Mp3playerTheme {
@@ -55,13 +55,13 @@ class MainActivity : ComponentActivity() {
                 } else {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                        color = MaterialTheme.colorScheme.background,
                     ) {
                         val playbackViewModel: PlaybackViewModel = viewModel()
                         val settingsRepository = remember { SettingsRepository(applicationContext) }
                         AppNavHost(
                             playbackViewModel = playbackViewModel,
-                            settingsRepository = settingsRepository
+                            settingsRepository = settingsRepository,
                         )
                     }
                 }
@@ -70,31 +70,34 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private val rainbowColors = listOf(
-    Color(0xFFFF0000),
-    Color(0xFFFF7F00),
-    Color(0xFFFFFF00),
-    Color(0xFF00FF00),
-    Color(0xFF0000FF),
-    Color(0xFF8B00FF)
-)
+private val rainbowColors =
+    listOf(
+        Color(0xFFFF0000),
+        Color(0xFFFF7F00),
+        Color(0xFFFFFF00),
+        Color(0xFF00FF00),
+        Color(0xFF0000FF),
+        Color(0xFF8B00FF),
+    )
 
 @Composable
 fun SplashScreen(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color.Black),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = "jw player",
             textAlign = TextAlign.Center,
-            style = TextStyle(
-                brush = Brush.linearGradient(colors = rainbowColors),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
+            style =
+                TextStyle(
+                    brush = Brush.linearGradient(colors = rainbowColors),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
         )
     }
 }

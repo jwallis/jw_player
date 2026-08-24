@@ -46,19 +46,20 @@ fun FolderListView(
     onFolderClick: (DocumentFile) -> Unit,
     onFileClick: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier,
-    highlightedUri: Uri? = null
+    highlightedUri: Uri? = null,
 ) {
     val listState = rememberLazyListState()
 
     Column(modifier = modifier) {
         if (showBack) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onBackClick)
-                    .semantics { contentDescription = "folder $backLabel" }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onBackClick)
+                        .semantics { contentDescription = "folder $backLabel" }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("$backLabel", style = MaterialTheme.typography.titleMedium)
             }
@@ -68,12 +69,13 @@ fun FolderListView(
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 items(listing.folders, key = { it.uri.toString() }) { folder ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onFolderClick(folder) }
-                            .semantics { contentDescription = "folder ${folder.name.orEmpty()}" }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onFolderClick(folder) }
+                                .semantics { contentDescription = "folder ${folder.name.orEmpty()}" }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.Folder, contentDescription = null)
                         Spacer(Modifier.width(12.dp))
@@ -85,13 +87,14 @@ fun FolderListView(
                     val background = if (isHighlighted) MaterialTheme.colorScheme.onSurface else Color.Transparent
                     val foreground = if (isHighlighted) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(background)
-                            .clickable { onFileClick(file) }
-                            .semantics { contentDescription = "file ${DirectoryLister.displayName(file)}" }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(background)
+                                .clickable { onFileClick(file) }
+                                .semantics { contentDescription = "file ${DirectoryLister.displayName(file)}" }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.MusicNote, contentDescription = null, tint = foreground)
                         Spacer(Modifier.width(12.dp))
@@ -104,14 +107,14 @@ fun FolderListView(
                 ScrollEdgeIndicator(
                     icon = Icons.Filled.KeyboardArrowUp,
                     description = "More folders or files above",
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    modifier = Modifier.align(Alignment.TopCenter),
                 )
             }
             if (listState.canScrollForward) {
                 ScrollEdgeIndicator(
                     icon = Icons.Filled.KeyboardArrowDown,
                     description = "More folders or files below",
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }
@@ -119,14 +122,19 @@ fun FolderListView(
 }
 
 @Composable
-private fun ScrollEdgeIndicator(icon: ImageVector, description: String, modifier: Modifier = Modifier) {
+private fun ScrollEdgeIndicator(
+    icon: ImageVector,
+    description: String,
+    modifier: Modifier = Modifier,
+) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(ROW_HEIGHT)
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(ROW_HEIGHT)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.CenterStart,
     ) {
         Icon(icon, contentDescription = description)
     }

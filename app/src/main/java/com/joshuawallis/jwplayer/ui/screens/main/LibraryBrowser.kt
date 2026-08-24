@@ -14,11 +14,11 @@ import com.joshuawallis.jwplayer.data.AUDIO_EXTENSIONS
 import com.joshuawallis.jwplayer.data.DirectoryLister
 import com.joshuawallis.jwplayer.data.DirectoryListing
 import com.joshuawallis.jwplayer.ui.components.FolderListView
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 @Composable
 fun LibraryBrowser(
@@ -27,7 +27,7 @@ fun LibraryBrowser(
     onFolderChange: (DocumentFile) -> Unit,
     highlightedUri: Uri?,
     onFilePlay: (DocumentFile, List<DocumentFile>) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (rootFolderDoc == null || currentFolderDoc == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -37,11 +37,12 @@ fun LibraryBrowser(
     }
 
     val listingCache = remember { ConcurrentHashMap<Uri, DirectoryListing>() }
-    val listing = remember(currentFolderDoc) {
-        listingCache.getOrPut(currentFolderDoc.uri) {
-            DirectoryLister.list(currentFolderDoc, AUDIO_EXTENSIONS)
+    val listing =
+        remember(currentFolderDoc) {
+            listingCache.getOrPut(currentFolderDoc.uri) {
+                DirectoryLister.list(currentFolderDoc, AUDIO_EXTENSIONS)
+            }
         }
-    }
     val parent = remember(currentFolderDoc) { currentFolderDoc.parentFile }
 
     // Prefetch one level ahead: while browsing this folder, read the contents of each of
@@ -55,8 +56,7 @@ fun LibraryBrowser(
                             DirectoryLister.list(subfolder, AUDIO_EXTENSIONS)
                         }
                     }
-                }
-                .awaitAll()
+                }.awaitAll()
         }
     }
 
@@ -68,6 +68,6 @@ fun LibraryBrowser(
         onFolderClick = onFolderChange,
         onFileClick = { file -> onFilePlay(file, listing.files) },
         highlightedUri = highlightedUri,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize(),
     )
 }
