@@ -40,9 +40,19 @@ jobs:
       - name: Compute branch name
         id: meta
         run: |
-          raw="${{ github.event.client_payload.issue_key }}"
-          safe=$(echo "$raw" | tr -c 'A-Za-z0-9_-' '-')
-          branch="ai/story/${safe}"
+          raw_key="${{ github.event.client_payload.issue_key }}"
+          safe_key=$(printf '%s' "$raw_key" | tr -c 'A-Za-z0-9_-' '-')
+
+          raw_summary="${{ github.event.client_payload.summary }}"
+          safe_summary=$(printf '%s' "$raw_summary" \
+            | tr '[:upper:]' '[:lower:]' \
+            | tr -c 'a-z0-9' '-' \
+            | tr -s '-' \
+            | sed -E 's/^-+|-+$//g' \
+            | cut -c1-50 \
+            | sed -E 's/-+$//')
+
+          branch="ai/story/${safe_key}-${safe_summary}"
           echo "branch=${branch}" >> "$GITHUB_OUTPUT"
 
       - name: Create branch
@@ -62,6 +72,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
+          show_full_output: true
+          display_report: true
           prompt: |
             You are implementing a Jira story in the jw_player Android app
             (Kotlin, Jetpack Compose, single :app module, package
@@ -88,9 +100,10 @@ jobs:
             files outside app/ and top-level Gradle config unless the story
             explicitly requires it.
 
-            Run `./gradlew assembleDebug` yourself and confirm it succeeds
-            before finishing. If it fails and you cannot fix it, do not
-            commit broken code — explain the problem instead.
+            Run `./gradlew assembleDebug` and `./gradlew testDebugUnitTest`
+            yourself and confirm both succeed before finishing. If either
+            fails and you cannot fix it, do not commit broken code — explain
+            the problem instead.
 
             If, after genuine effort, this story cannot be implemented (too
             vague, contradictory, already done, or out of scope for this
@@ -102,6 +115,7 @@ jobs:
             git command beyond commit — pushing and PR creation are handled
             by later steps in this workflow, outside your control.
           claude_args: |
+            --model sonnet
             --allowedTools "Read,Edit,Write,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(./gradlew:*),Bash(find:*),Bash(grep:*)"
 
       - name: Check for committed changes and verify build
@@ -113,6 +127,10 @@ jobs:
           fi
           if ! ./gradlew assembleDebug; then
             echo "::error::Claude committed changes but the build is broken (assembleDebug failed) — treating as a hard failure, not opening a PR"
+            exit 1
+          fi
+          if ! ./gradlew testDebugUnitTest; then
+            echo "::error::Claude committed changes but unit tests fail (testDebugUnitTest failed) — treating as a hard failure, not opening a PR"
             exit 1
           fi
           echo "has_changes=true" >> "$GITHUB_OUTPUT"
