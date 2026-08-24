@@ -14,7 +14,9 @@ Build and test via the Gradle wrapper from the repo root (`./gradlew`, not a glo
 - Run unit tests (JVM, in `app/src/test`): `./gradlew testDebugUnitTest`
 - Run a single unit test class: `./gradlew testDebugUnitTest --tests "com.joshuawallis.jwplayer.ExampleUnitTest"`
 - Run instrumented tests (require a connected device/emulator, in `app/src/androidTest`): `./gradlew connectedDebugAndroidTest`
-- Lint: `./gradlew lint`
+- Android lint: `./gradlew lint`
+- Kotlin style check: `./gradlew ktlintCheck`
+- Kotlin style autofix: `./gradlew ktlintFormat`
 - Clean build: `./gradlew clean`
 
 ## Architecture
@@ -36,3 +38,7 @@ Build and test via the Gradle wrapper from the repo root (`./gradlew`, not a glo
 - **`PlaybackViewModel`/`StateFlow` is the only source of truth for playback state.** Don't introduce a second, parallel place that tracks what's playing — extend the existing `PlaybackUiState`/`PlaybackMode` instead.
 - **Accessibility is a tested requirement, not optional polish.** Interactive elements need `Modifier.semantics { contentDescription = ... }` (see the existing accessibility pass across `FolderListView.kt`, `MiniPlayer.kt`, `SettingsScreen.kt` for the established pattern/wording style).
 - **No new DI framework or major library additions without being asked.** This app deliberately has no dependency-injection framework — dependencies are constructed manually (e.g. `remember { SettingsRepository(applicationContext) }`). Stick to that pattern rather than introducing Hilt/Koin/etc.
+- **Write a unit test for any new non-trivial logic you add** (formatting, parsing, calculations — anything that isn't pure UI wiring), in `app/src/test`, and run it (`./gradlew testDebugUnitTest`) before finishing. UI/Compose changes alone don't need a new test.
+- **One way of doing a thing.** If this codebase already has an established pattern for something (a tick-loop `LaunchedEffect` for periodic UI updates, hoisted `remember` state vs. `ViewModel`, etc.), reuse it rather than introducing a second, slightly different way to do the same kind of thing.
+- **Prefer clarity over cleverness.** Don't collapse logic into dense one-liners or add abstraction/indirection a reader doesn't need to follow what's happening.
+- **Kotlin style is enforced by `ktlint`** (`.editorconfig` at repo root exempts `@Composable` functions from the standard camelCase naming rule, since PascalCase is the correct Compose convention). Run `./gradlew ktlintFormat` before finishing if you're unsure your changes are compliant.

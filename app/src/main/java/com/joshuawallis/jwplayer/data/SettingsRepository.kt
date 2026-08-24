@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 
-class SettingsRepository(context: Context) {
+class SettingsRepository(
+    context: Context,
+) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getRootFolderUri(): Uri? = prefs.getString(KEY_ROOT_FOLDER_URI, null)?.toUri()

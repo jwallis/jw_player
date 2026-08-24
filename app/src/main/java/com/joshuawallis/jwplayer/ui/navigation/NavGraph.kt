@@ -26,15 +26,16 @@ object Route {
 fun AppNavHost(
     playbackViewModel: PlaybackViewModel,
     settingsRepository: SettingsRepository,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
 ) {
     val context = LocalContext.current
 
     var rootFolderUri by remember { mutableStateOf(settingsRepository.getRootFolderUri()) }
     var whiteNoiseUri by remember { mutableStateOf(settingsRepository.getWhiteNoiseUri()) }
-    val rootFolderDoc = remember(rootFolderUri) {
-        rootFolderUri?.let { DocumentFile.fromTreeUri(context, it) }
-    }
+    val rootFolderDoc =
+        remember(rootFolderUri) {
+            rootFolderUri?.let { DocumentFile.fromTreeUri(context, it) }
+        }
     var currentFolderDoc by remember(rootFolderDoc) { mutableStateOf(rootFolderDoc) }
 
     NavHost(navController = navController, startDestination = Route.MAIN) {
@@ -47,7 +48,7 @@ fun AppNavHost(
                 currentFolderDoc = currentFolderDoc,
                 onFolderChange = { currentFolderDoc = it },
                 playbackViewModel = playbackViewModel,
-                onSettingsClick = { navController.navigate(Route.SETTINGS) }
+                onSettingsClick = { navController.navigate(Route.SETTINGS) },
             )
         }
         composable(Route.SETTINGS) {
@@ -63,7 +64,7 @@ fun AppNavHost(
                     settingsRepository.setWhiteNoiseUri(uri)
                 },
                 playbackViewModel = playbackViewModel,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
             )
         }
     }

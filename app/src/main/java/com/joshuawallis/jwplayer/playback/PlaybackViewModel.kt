@@ -27,7 +27,7 @@ data class PlaybackUiState(
     val title: String = "",
     val artist: String = "",
     val positionMs: Long = 0L,
-    val durationMs: Long = 0L
+    val durationMs: Long = 0L,
 )
 
 private const val HOLD_SEEK_TICK_MS = 30L
@@ -35,8 +35,9 @@ private const val HOLD_SEEK_MULTIPLIER = 6
 private const val RESTART_THRESHOLD_MS = 3_000L
 private const val POSITION_TICK_MS = 200L
 
-class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
-
+class PlaybackViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val player = ExoPlayer.Builder(application).build()
 
     private val _uiState = MutableStateFlow(PlaybackUiState())
@@ -46,17 +47,19 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private var libraryIndex: Int = -1
 
     init {
-        player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _uiState.update { it.copy(isPlaying = isPlaying) }
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED && _uiState.value.mode == PlaybackMode.LIBRARY) {
-                    advanceToNext(wrap = false)
+        player.addListener(
+            object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    _uiState.update { it.copy(isPlaying = isPlaying) }
                 }
-            }
-        })
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED && _uiState.value.mode == PlaybackMode.LIBRARY) {
+                        advanceToNext(wrap = false)
+                    }
+                }
+            },
+        )
 
         viewModelScope.launch {
             while (true) {
@@ -75,7 +78,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** Called when a file is tapped in the Library browser. [siblings] is every playable file in that folder, sorted. */
-    fun playLibraryFile(file: DocumentFile, siblings: List<DocumentFile>) {
+    fun playLibraryFile(
+        file: DocumentFile,
+        siblings: List<DocumentFile>,
+    ) {
         libraryQueue = siblings
         val index = siblings.indexOfFirst { it.uri == file.uri }
         if (index == -1) return
@@ -116,7 +122,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** Advances the seek position by [elapsedRealtimeMs] x 3 in [direction]. Returns true if a track boundary was hit. */
-    fun applyHoldSeekTick(direction: SeekDirection, elapsedRealtimeMs: Long): Boolean {
+    fun applyHoldSeekTick(
+        direction: SeekDirection,
+        elapsedRealtimeMs: Long,
+    ): Boolean {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return true
         val duration = player.duration.takeIf { it > 0 } ?: return false
         val delta = elapsedRealtimeMs * HOLD_SEEK_MULTIPLIER
@@ -219,7 +228,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 mode = PlaybackMode.LIBRARY,
                 currentFileUri = file.uri,
                 title = title,
-                artist = artist
+                artist = artist,
             )
         }
         refreshPosition()

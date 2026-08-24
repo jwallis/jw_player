@@ -59,21 +59,22 @@ fun MiniPlayer(
     onBeginHoldSeek: () -> Unit,
     onHoldSeekTick: (SeekDirection, Long) -> Boolean,
     onEndHoldSeekNormally: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         val titleLine = if (uiState.artist.isNotBlank()) "${uiState.artist} - ${uiState.title}" else uiState.title
         Text(
             text = titleLine,
             maxLines = 1,
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "Now playing: $titleLine" }
-                .basicMarquee()
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Now playing: $titleLine" }
+                    .basicMarquee(),
         )
 
         Spacer(Modifier.height(4.dp))
@@ -83,21 +84,25 @@ fun MiniPlayer(
             text = elapsed,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "Elapsed time $elapsed" }
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Elapsed time $elapsed" },
         )
 
         Spacer(Modifier.height(4.dp))
 
-        val progress = if (uiState.durationMs > 0) {
-            (uiState.positionMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
-        } else 0f
+        val progress =
+            if (uiState.durationMs > 0) {
+                (uiState.positionMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
 
         SeekBar(
             progress = progress,
             onSeek = { fraction -> onSeekTo((fraction * uiState.durationMs).toLong()) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(8.dp))
@@ -105,7 +110,7 @@ fun MiniPlayer(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onRestartOrPrevious) {
                 Icon(Icons.Filled.SkipPrevious, contentDescription = "Restart or previous track")
@@ -117,13 +122,13 @@ fun MiniPlayer(
                 direction = SeekDirection.BACKWARD,
                 onBegin = onBeginHoldSeek,
                 onTick = onHoldSeekTick,
-                onEndNormally = onEndHoldSeekNormally
+                onEndNormally = onEndHoldSeekNormally,
             )
 
             IconButton(onClick = onTogglePlayPause) {
                 Icon(
                     imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (uiState.isPlaying) "Pause" else "Play"
+                    contentDescription = if (uiState.isPlaying) "Pause" else "Play",
                 )
             }
 
@@ -133,7 +138,7 @@ fun MiniPlayer(
                 direction = SeekDirection.FORWARD,
                 onBegin = onBeginHoldSeek,
                 onTick = onHoldSeekTick,
-                onEndNormally = onEndHoldSeekNormally
+                onEndNormally = onEndHoldSeekNormally,
             )
 
             IconButton(onClick = onNext) {
@@ -154,50 +159,52 @@ private fun formatTime(ms: Long): String {
 private fun SeekBar(
     progress: Float,
     onSeek: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var dragProgress by remember { mutableStateOf<Float?>(null) }
     val displayProgress = (dragProgress ?: progress).coerceIn(0f, 1f)
 
     BoxWithConstraints(
-        modifier = modifier
-            .height(24.dp)
-            .semantics { contentDescription = "Seek bar" }
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    onSeek((offset.x / size.width.toFloat()).coerceIn(0f, 1f))
-                }
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        dragProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                    },
-                    onDrag = { change, _ ->
-                        dragProgress = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                    },
-                    onDragEnd = {
-                        dragProgress?.let(onSeek)
-                        dragProgress = null
-                    },
-                    onDragCancel = { dragProgress = null }
-                )
-            }
+        modifier =
+            modifier
+                .height(24.dp)
+                .semantics { contentDescription = "Seek bar" }
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        onSeek((offset.x / size.width.toFloat()).coerceIn(0f, 1f))
+                    }
+                }.pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            dragProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        },
+                        onDrag = { change, _ ->
+                            dragProgress = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        },
+                        onDragEnd = {
+                            dragProgress?.let(onSeek)
+                            dragProgress = null
+                        },
+                        onDragCancel = { dragProgress = null },
+                    )
+                },
     ) {
         val trackWidth = maxWidth
         Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .fillMaxWidth()
-                .height(2.dp)
-                .background(MaterialTheme.colorScheme.onSurfaceVariant)
+            modifier =
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant),
         )
         Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .offset(x = trackWidth * displayProgress - 6.dp)
-                .size(12.dp)
-                .background(MaterialTheme.colorScheme.primary, CircleShape)
+            modifier =
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = trackWidth * displayProgress - 6.dp)
+                    .size(12.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
         )
     }
 }
@@ -209,45 +216,46 @@ private fun HoldSeekButton(
     direction: SeekDirection,
     onBegin: () -> Unit,
     onTick: (SeekDirection, Long) -> Boolean,
-    onEndNormally: () -> Unit
+    onEndNormally: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val description = contentDescription
     Box(
-        modifier = Modifier
-            .size(48.dp)
-            .semantics(mergeDescendants = true) {
-                this.contentDescription = description
-                role = Role.Button
-            }
-            .pointerInput(direction) {
-                detectTapGestures(
-                    onPress = {
-                        var endedAtEdge = false
-                        val job = scope.launch {
-                            onBegin()
-                            var lastTick = System.currentTimeMillis()
-                            while (isActive) {
-                                delay(30)
-                                val now = System.currentTimeMillis()
-                                val elapsed = now - lastTick
-                                lastTick = now
-                                if (onTick(direction, elapsed)) {
-                                    endedAtEdge = true
-                                    break
+        modifier =
+            Modifier
+                .size(48.dp)
+                .semantics(mergeDescendants = true) {
+                    this.contentDescription = description
+                    role = Role.Button
+                }.pointerInput(direction) {
+                    detectTapGestures(
+                        onPress = {
+                            var endedAtEdge = false
+                            val job =
+                                scope.launch {
+                                    onBegin()
+                                    var lastTick = System.currentTimeMillis()
+                                    while (isActive) {
+                                        delay(30)
+                                        val now = System.currentTimeMillis()
+                                        val elapsed = now - lastTick
+                                        lastTick = now
+                                        if (onTick(direction, elapsed)) {
+                                            endedAtEdge = true
+                                            break
+                                        }
+                                    }
                                 }
+                            try {
+                                awaitRelease()
+                            } finally {
+                                job.cancel()
+                                if (!endedAtEdge) onEndNormally()
                             }
-                        }
-                        try {
-                            awaitRelease()
-                        } finally {
-                            job.cancel()
-                            if (!endedAtEdge) onEndNormally()
-                        }
-                    }
-                )
-            },
-        contentAlignment = Alignment.Center
+                        },
+                    )
+                },
+        contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null)
     }
