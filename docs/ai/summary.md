@@ -262,10 +262,57 @@ org.junit.Assert.*` wildcard imports ktlint couldn't auto-fix, made explicit by
 hand) were committed straight to `main`, so the first real PR to hit this workflow
 only shows its actual diff.
 
+## Phase 2 follow-ups
+
+**Fixed the recurring "Node.js 20 is deprecated" warning** on every Actions run -
+`actions/checkout@v4` internally targets Node 20, and GitHub-hosted runners now
+force it onto Node 24. Bumped to `actions/checkout@v7` (Node-24-native) in both
+`story-implementation.yml` and `lint.yml`.
+
+**Added real unit tests to prove `testDebugUnitTest` actually asserts things**,
+not just compiles: `FormattingTest.kt` covers `MiniPlayer.formatTime` (bumped
+from `private` to `internal` for testability) and
+`DirectoryLister.titleFromFileName`. Verified via the JUnit XML report
+(`tests="3" failures="0" errors="0"`), not just Gradle's "BUILD SUCCESSFUL" -
+worth remembering that a passing build can still mean zero tests ran.
+
+**Debugging note, not a code change:** the reused JWP-2 test PR branch didn't
+trigger `lint.yml` on push, because `pull_request`-triggered workflows read
+their YAML from the PR's *head* branch, not `main` - a workflow added to `main`
+doesn't apply to a PR branch that predates it until that branch is updated.
+Fixed for that one branch by merging `main` in (a real 3-block conflict in
+`MainActivity.kt`, resolved by keeping the branch's actual feature content and
+pulling in `main`'s unrelated accessibility imports).
+
+## Phase 3 — built, not yet verified end-to-end
+
+`.github/workflows/ai-review.yml`. Design detail lives in the plan file; the
+one decision worth calling out here is the **verdict signal**. Phase 1 uses "did
+Claude commit anything" as an implicit pass/fail signal, which works with two
+outcomes. Phase 3 needs three - approve, fix-and-loop, or blocked (found a real
+problem but can't safely fix it) - and collapsing "blocked" into "no commit"
+would silently auto-merge code Claude gave up on, the one failure mode this
+pipeline can't afford with no human backstop. So Claude writes an explicit
+verdict (`APPROVE`/`FIXED`/`BLOCKED`, plus a reason) to a git-ignored scratch
+file that a workflow step reads afterward.
+
+Triggered by `workflow_run` on `Lint`'s completion (not a second `pull_request`
+trigger) specifically so review never races lint's own autofix-and-push. A
+staleness guard re-checks the PR's actual head SHA before doing anything, since
+a fast autofix-then-review sequence could otherwise act on code that's already
+been superseded. An iteration cap (1 fix commit) stops an unbounded fix/re-review
+loop and hands off to a human via Slack instead. On approval, merges with a real
+merge commit, not squash - explicit user preference, applies to every future
+auto-merge in this pipeline, not just this one.
+
+Not yet run against a real PR - next step is exercising it end-to-end the same
+way Phase 2 was (push to the reused JWP-2 branch, watch the run).
+
 ## Status
 
 Phase 0, Phase 1, and Phase 2 are complete and verified end-to-end - a real Jira
 story (JWP-2) went through Phases 0-1 and produced a real, working PR
 (<https://github.com/jwallis/jw_player/pull/1>); Phase 2's lint workflow builds,
-tests, and `ktlintCheck` all pass against the newly-formatted codebase. Next up is
-Phase 3 (AI code review), which gets its own focused plan when work on it starts.
+tests, and `ktlintCheck` all pass against the newly-formatted codebase. Phase 3
+(AI code review) is built (`ai-review.yml`) but not yet exercised against a real
+PR - that's the next step before moving on.
