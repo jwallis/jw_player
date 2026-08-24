@@ -24,3 +24,15 @@ duplicated here — just pointers to where to find/manage them.
   anywhere in CI; will need to become a GitHub Actions secret (or be replaced
   by OIDC federation) when Phase 7 actually wires up Device Farm calls from
   GitHub Actions.
+- **Anthropic API key** (dedicated key, named `jw-player-ci` in the Anthropic
+  console - not the personal/shared key) used by `story-implementation.yml`
+  to run Claude Code non-interactively via `anthropics/claude-code-action`.
+  Stored as a GitHub Actions secret named `ANTHROPIC_API_KEY` in both
+  `jw_player` and `jw_player_automation`, set via `gh secret set
+  ANTHROPIC_API_KEY --repo <owner>/<repo>`.
+  <https://github.com/jwallis/jw_player/settings/secrets/actions> - GitHub
+  secrets are write-only (can't be viewed again once set). The raw key value
+  was deliberately **not** saved anywhere (no password manager copy) - it's
+  set in both repos that will ever need it (Phase 6 covered already), so it
+  stays a CI-only credential with zero copies outside GitHub. If it's ever
+  rotated, generate a new key and re-run `gh secret set` in both repos.

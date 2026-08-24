@@ -142,8 +142,56 @@ as CLI profile `jw-player-ci`, region `us-east-2`. Verified via
 *where* every secret/credential actually lives (Slack webhook, GitHub PAT, AWS
 keys), without storing the values themselves.
 
+## Phase 1 — in progress
+
+Planned in detail (see the plan file) and partway through execution.
+
+**Fixed `CLAUDE.md` first.** It was badly stale - still described the app as the
+untouched Android Studio "Empty Activity" template with a `Greeting("Android")`
+placeholder, and claimed `minSdk 34` (actually 26). Since Phase 1's design leans on
+`CLAUDE.md` as the way headless Claude Code runs learn the codebase's conventions,
+this had to be accurate before any automated run could trust it. Rewrote "Project
+state"/"Architecture" to reflect the real app (splash screen, nav host, folder
+browser backed by SAF, `PlaybackViewModel`/`StateFlow` as the sole playback state
+owner, white noise sharing the same `ExoPlayer` instance, thin `SharedPreferences`
+repository, no DI framework) and added a new "Conventions to follow" section stating
+those patterns explicitly for an unsupervised AI agent to preserve.
+
+**Replaced the stub workflow.** `.github/workflows/dispatch-test.yml` (the Phase 0
+echo-only stub) is gone; `.github/workflows/story-implementation.yml` is the real
+thing - validates the dispatch payload, creates a per-story branch
+(`ai/story/{ISSUE_KEY}`), runs `anthropics/claude-code-action` with a prompt built
+from the Jira issue's key/summary/description/url (description explicitly delimited
+as untrusted data, not instructions - a prompt-injection mitigation), independently
+re-verifies the build (`./gradlew assembleDebug`) rather than trusting the agent's
+self-report, and only then pushes and opens a PR. Three distinct Slack outcomes,
+tagged `[Story Implementation]`: success (PR link), no changes made (agent declined -
+distinct from failure), and failure (covers pipeline errors *and* a post-commit
+build failure - resolved during planning to fail loudly rather than silently
+discard broken code, since there's no review gate before Phase 3). No auto-merge -
+Phase 1 stops at "PR opened."
+
+**Jira Flow payload expanded.** Added a `description` field
+(`{{issue.description}}`) to the "Ready for AI" Flow's request body, alongside the
+existing `issue_key`/`summary`/`url` - gives the workflow real story content to
+implement, not just a one-line summary.
+
+**New secret: `ANTHROPIC_API_KEY`.** A dedicated Anthropic API key (not the
+personal one), so this pipeline's spend is separately trackable/revocable. Added via
+`gh secret set` to both `jw_player` (needed now) and `jw_player_automation` (needed
+later, Phase 6) in one pass, then the raw value was deliberately discarded rather
+than saved in a password manager - since it's already stored everywhere it'll ever
+be needed, keeping zero copies outside GitHub keeps it a cleaner CI-only credential.
+
+**Not yet done:** pushing this all end-to-end with a synthetic test dispatch
+(`gh api repos/jwallis/jw_player/dispatches ...`) to verify the whole chain works,
+including the ADF/description-escaping concern flagged during planning (Jira
+descriptions are rich text internally - need to confirm the smart-value rendering
+doesn't mangle a real multi-line/formatted description before trusting this for
+actual stories).
+
 ## Status
 
-Phase 0 is complete and verified (see above). Next up is Phase 1 - AI implements
-an actual user story pulled from Jira and opens a PR. Bigger and more open-ended
-than Phase 0; gets its own focused plan when work on it starts.
+Phase 0 is complete and verified (see above). Phase 1 is implemented and pushed to
+`main`; end-to-end verification (synthetic dispatch test) is the next step before
+trusting it with a real Jira story.
