@@ -36,3 +36,48 @@ duplicated here — just pointers to where to find/manage them.
   set in both repos that will ever need it (Phase 6 covered already), so it
   stays a CI-only credential with zero copies outside GitHub. If it's ever
   rotated, generate a new key and re-run `gh secret set` in both repos.
+- **`jw-company-developer-bot` and `jw-company-reviewer-bot` GitHub App private
+  keys** - give Phase 1/2 (developer-bot: opens the PR, commits lint autofixes)
+  and Phase 3 (reviewer-bot: approves/requests changes/merges) each their own
+  GitHub identity, distinct from the shared `github-actions[bot]` - needed
+  because GitHub blocks a PR's own author from formally approving it, so
+  review has to run as a genuinely different actor. Installed on `jw_player`
+  only (not `jw_player_automation` - nothing there needs them yet). Stored as
+  GitHub Actions secrets, set via `gh secret set <NAME> --repo jwallis/jw_player
+  < path/to/key.pem`:
+  - `DEVELOPER_BOT_PRIVATE_KEY` / `DEVELOPER_BOT_CLIENT_ID`
+  - `REVIEWER_BOT_PRIVATE_KEY` / `REVIEWER_BOT_CLIENT_ID`
+  <https://github.com/jwallis/jw_player/settings/secrets/actions> - private
+  keys are write-only once set (regenerate + re-run `gh secret set` to
+  rotate). Client IDs aren't sensitive (GitHub uses them in public OAuth
+  flows) but are stored as secrets anyway for consistency with how the
+  workflow reads them.
+
+## GitHub Apps (non-secret reference)
+
+App ID and Client ID aren't secrets - recorded here for reference, since
+they're needed to know which app a workflow run authenticated as.
+
+- **`jw-company-developer-bot`** - App ID `4706766`, Client ID
+  `Iv23ctGq9Lvc36MMKrzd`. <https://github.com/settings/apps/jw-company-developer-bot>
+- **`jw-company-reviewer-bot`** - App ID `4706705`, Client ID
+  `Iv23liCTa1vEkxRXn3IR`. <https://github.com/settings/apps/jw-company-reviewer-bot>
+
+Both: Repository permissions `Contents: Read & write`, `Pull requests: Read &
+write`; installed on `jw_player` only.
+
+<!--
+  Where the Client ID actually gets used: it's the `app-id` input to
+  actions/create-github-app-token in the workflow (accepts either the numeric
+  App ID or the Client ID - Client ID is GitHub's current recommendation).
+  That step exchanges the App's private key for a short-lived installation
+  token, which then replaces github.token in whichever steps should run as
+  that bot instead of the default github-actions[bot]:
+    - developer-bot: story-implementation.yml (branch/commit/push/PR-create),
+      lint.yml (autofix commit/push)
+    - reviewer-bot: ai-review.yml (review/approve/merge, and the FIXED-path
+      commit/push)
+  The App ID itself isn't referenced anywhere in a workflow once the Client ID
+  is in use - it's kept here purely so a GitHub Apps settings page can be
+  found by ID if needed.
+-->

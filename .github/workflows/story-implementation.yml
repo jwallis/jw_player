@@ -5,8 +5,7 @@ on:
     types: [story-ready-for-ai]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: story-implementation-${{ github.event.client_payload.issue_key }}
@@ -32,10 +31,18 @@ jobs:
           echo "Summary: ${{ github.event.client_payload.summary }}"
           echo "URL: ${{ github.event.client_payload.url }}"
 
+      - name: Generate developer-bot token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.DEVELOPER_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.DEVELOPER_BOT_PRIVATE_KEY }}
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Compute branch name
         id: meta
@@ -57,8 +64,8 @@ jobs:
 
       - name: Create branch
         run: |
-          git config user.name "CI Bot"
-          git config user.email "ci-bot@users.noreply.github.com"
+          git config user.name "jw-company-developer-bot[bot]"
+          git config user.email "320747005+jw-company-developer-bot[bot]@users.noreply.github.com"
           branch="${{ steps.meta.outputs.branch }}"
           # If this story was dispatched before, drop the stale branch and start clean from main.
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
@@ -71,7 +78,7 @@ jobs:
         uses: anthropics/claude-code-action@v1.0.201
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ github.token }}
+          github_token: ${{ steps.app-token.outputs.token }}
           show_full_output: true
           display_report: true
           prompt: |
@@ -143,7 +150,7 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         id: pr
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           body=$(cat <<PRBODY

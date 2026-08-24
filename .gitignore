@@ -9,3 +9,4 @@
 .cxx
 .claude/settings.local.json
 local.properties
+.ai_review_verdict

@@ -1,0 +1,198 @@
+name: AI Code Review
+
+on:
+  workflow_run:
+    workflows: ["Lint"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ai-review-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+      cancel-in-progress: true
+    steps:
+      - name: Generate reviewer-bot token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.REVIEWER_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.REVIEWER_BOT_PRIVATE_KEY }}
+
+      - name: Resolve PR context
+        id: pr
+        env:
+          PR_JSON: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+        run: |
+          pr_count=$(echo "$PR_JSON" | jq 'length')
+          if [ "$pr_count" -eq 0 ]; then
+            echo "::error::workflow_run had no associated pull_requests (fork PR, or PR closed before this ran?)"
+            exit 1
+          fi
+          echo "number=$(echo "$PR_JSON" | jq -r '.[0].number')" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$(echo "$PR_JSON" | jq -r '.[0].head.ref')" >> "$GITHUB_OUTPUT"
+          echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Staleness guard
+        id: staleness
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          current_sha=$(gh pr view "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --json headRefOid -q .headRefOid)
+          if [ "$current_sha" != "${{ steps.pr.outputs.sha }}" ]; then
+            echo "PR has moved on since this run's SHA (${{ steps.pr.outputs.sha }} -> $current_sha) - skipping, a newer run will cover it"
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout PR head
+        if: steps.staleness.outputs.stale == 'false'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.pr.outputs.head_ref }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Configure git identity
+        if: steps.staleness.outputs.stale == 'false'
+        run: |
+          git config user.name "jw-company-reviewer-bot[bot]"
+          git config user.email "320745438+jw-company-reviewer-bot[bot]@users.noreply.github.com"
+
+      - name: Check iteration cap
+        if: steps.staleness.outputs.stale == 'false'
+        id: cap
+        run: |
+          # Count only commits *this workflow's own fix step* made (tagged
+          # with the [ai-review-fix] marker below), not total commits ahead
+          # of main - a branch can pick up unrelated commits (merges from
+          # main, multiple implementation commits) that aren't review cycles.
+          fix_commit_count=$(git log origin/main..HEAD --oneline --fixed-strings --grep='[ai-review-fix]' | wc -l | tr -d ' ')
+          if [ "$fix_commit_count" -ge 1 ]; then
+            echo "capped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "capped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Claude Code review
+        if: steps.staleness.outputs.stale == 'false' && steps.cap.outputs.capped == 'false'
+        id: claude
+        uses: anthropics/claude-code-action@v1.0.201
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          show_full_output: true
+          display_report: true
+          prompt: |
+            You are reviewing a pull request in the jw_player Android app
+            (Kotlin, Jetpack Compose, single :app module, package
+            com.joshuawallis.jwplayer). Read CLAUDE.md first and follow its
+            conventions. Diff this branch against origin/main to see what
+            changed.
+
+            You must end by writing a file named `.ai_review_verdict` at the
+            repo root (it is git-ignored - never `git add` or commit it).
+            Line 1 must be exactly one of: APPROVE, FIXED, BLOCKED. If FIXED
+            or BLOCKED, line 2 is a short one-line reason.
+
+            - APPROVE: the change is correct, builds, and follows CLAUDE.md
+              conventions as-is. Make no code changes.
+            - FIXED: you found real, fixable problems (bugs, convention
+              violations, missing error handling for reachable cases, etc.).
+              Fix them directly, then run `./gradlew assembleDebug` and
+              `./gradlew testDebugUnitTest` yourself and confirm both pass.
+              Commit your fix locally with a message that starts with the
+              literal text `[ai-review-fix] ` followed by a description of
+              what you changed and why (this exact marker is how the workflow
+              counts review cycles - do not omit or alter it). Do NOT push -
+              a later workflow step does that.
+            - BLOCKED: you found a real problem but cannot safely fix it
+              yourself (ambiguous requirement, missing context, would need a
+              product decision, etc.). Make NO commit. Explain the problem on
+              line 2.
+
+            Do not touch .github/workflows/, secrets, or files outside app/
+            and top-level Gradle config.
+          claude_args: |
+            --model sonnet
+            --allowedTools "Read,Edit,Write,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(./gradlew:*),Bash(find:*),Bash(grep:*)"
+
+      - name: Read verdict
+        if: steps.staleness.outputs.stale == 'false' && steps.cap.outputs.capped == 'false'
+        id: verdict
+        run: |
+          if [ ! -f .ai_review_verdict ]; then
+            echo "::error::Claude did not write .ai_review_verdict"
+            echo "verdict=MISSING" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          {
+            echo "verdict=$(sed -n '1p' .ai_review_verdict)"
+            echo "reason=$(sed -n '2p' .ai_review_verdict)"
+          } >> "$GITHUB_OUTPUT"
+          rm -f .ai_review_verdict
+
+      - name: Independently verify build and tests
+        if: steps.verdict.outputs.verdict == 'APPROVE' || steps.verdict.outputs.verdict == 'FIXED'
+        run: |
+          ./gradlew assembleDebug
+          ./gradlew testDebugUnitTest
+
+      - name: Push fix commit
+        if: steps.verdict.outputs.verdict == 'FIXED'
+        run: git push origin "HEAD:${{ steps.pr.outputs.head_ref }}"
+
+      - name: Approve and merge
+        if: steps.verdict.outputs.verdict == 'APPROVE'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh pr review "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --approve --body "Approved by AI Code Review - no issues found."
+          gh pr merge "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --merge --delete-branch
+
+      - name: Notify Slack (approved and merged)
+        if: steps.verdict.outputs.verdict == 'APPROVE' && success()
+        run: |
+          pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"[AI Code Review] :white_check_mark: Approved and merged — PR: ${pr_url}\"}" \
+            "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
+
+      - name: Notify Slack (fix pushed)
+        if: steps.verdict.outputs.verdict == 'FIXED' && success()
+        run: |
+          pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"[AI Code Review] :arrows_counterclockwise: Requested changes, fix pushed — PR: ${pr_url}\nReason: ${{ steps.verdict.outputs.reason }}\"}" \
+            "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
+
+      - name: Notify Slack (blocked)
+        if: steps.verdict.outputs.verdict == 'BLOCKED'
+        run: |
+          pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"[AI Code Review] :x: Blocked, needs a human — PR: ${pr_url}\nReason: ${{ steps.verdict.outputs.reason }}\"}" \
+            "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
+
+      - name: Notify Slack (iteration cap)
+        if: steps.cap.outputs.capped == 'true'
+        run: |
+          pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"[AI Code Review] :warning: Fix/review loop hit its cap (1 fix commit) — PR: ${pr_url}\nNeeds a human to look.\"}" \
+            "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
+
+      - name: Notify Slack (failure)
+        if: failure()
+        run: |
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"[AI Code Review] :x: Failed — PR: ${pr_url}\nRun: ${run_url}\"}" \
+            "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
