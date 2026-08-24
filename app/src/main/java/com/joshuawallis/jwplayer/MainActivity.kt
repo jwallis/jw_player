@@ -1,7 +1,5 @@
 package com.joshuawallis.jwplayer
 
-// comment for testing automated linter and AI code review (retry with dedicated bot identities)
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
