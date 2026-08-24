@@ -239,10 +239,33 @@ Code's own runtime (Node/Bun) from scratch, since nothing is cached yet. Flagged
 the plan file as a known follow-up (`actions/cache` for the Gradle cache), not
 blocking, worth doing once more phases exist to amortize the fix across.
 
+## Phase 2 — complete
+
+`.github/workflows/lint.yml`, triggered by `pull_request` into `main` (any PR, not
+scoped to AI-authored branches). Runs `./gradlew ktlintFormat`
+(`org.jlleitschuh.gradle.ktlint`, default ruleset), commits any autofix as `CI Bot`,
+pushes it back to the PR's head branch, and hard-fails if violations remain that
+ktlint couldn't fix itself. Posts `[Linter]` to Slack on success (`clean` vs.
+`autofixed`) and failure. No LLM involvement anywhere in this step - purely a static
+formatter plus scripted git/Slack calls.
+
+One real wrinkle: ktlint's default naming rule doesn't know about Compose and
+flagged every `@Composable` function (PascalCase, e.g. `MainScreen`) as a violation,
+since standard Kotlin style expects camelCase. Fixed with a repo-root
+`.editorconfig` entry (`ktlint_function_naming_ignore_when_annotated_with =
+Composable`) - the standard, documented way ktlint projects exempt Compose UI
+functions from that one rule.
+
+Since the existing codebase had never been linted, `ktlintFormat` was also run once
+locally and the resulting formatting fixes (plus two boilerplate `import
+org.junit.Assert.*` wildcard imports ktlint couldn't auto-fix, made explicit by
+hand) were committed straight to `main`, so the first real PR to hit this workflow
+only shows its actual diff.
+
 ## Status
 
-Phase 0 and Phase 1 are both complete and verified end-to-end - a real Jira story
-(JWP-2) went through the full pipeline and produced a real, working PR
-(<https://github.com/jwallis/jw_player/pull/1>). Next up is Phase 2 (linting) and
-Phase 3 (AI code review), which get their own focused plan when work on them
-starts.
+Phase 0, Phase 1, and Phase 2 are complete and verified end-to-end - a real Jira
+story (JWP-2) went through Phases 0-1 and produced a real, working PR
+(<https://github.com/jwallis/jw_player/pull/1>); Phase 2's lint workflow builds,
+tests, and `ktlintCheck` all pass against the newly-formatted codebase. Next up is
+Phase 3 (AI code review), which gets its own focused plan when work on it starts.
