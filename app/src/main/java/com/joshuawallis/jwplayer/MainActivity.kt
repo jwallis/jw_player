@@ -1,6 +1,6 @@
 package com.joshuawallis.jwplayer
 
-// comment for testing automated linter and AI code review
+// comment for testing automated linter and AI code review (retry after --repo fix)
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
