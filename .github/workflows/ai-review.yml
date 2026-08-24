@@ -74,7 +74,7 @@ jobs:
           # of main - a branch can pick up unrelated commits (merges from
           # main, multiple implementation commits) that aren't review cycles.
           fix_commit_count=$(git log origin/main..HEAD --oneline --fixed-strings --grep='[ai-review-fix]' | wc -l | tr -d ' ')
-          if [ "$fix_commit_count" -ge 1 ]; then
+          if [ "$fix_commit_count" -ge 3 ]; then
             echo "capped=true" >> "$GITHUB_OUTPUT"
           else
             echo "capped=false" >> "$GITHUB_OUTPUT"
@@ -89,6 +89,8 @@ jobs:
           github_token: ${{ steps.app-token.outputs.token }}
           show_full_output: true
           display_report: true
+          bot_id: "320745438"
+          bot_name: "jw-company-reviewer-bot[bot]"
           prompt: |
             You are reviewing a pull request in the jw_player Android app
             (Kotlin, Jetpack Compose, single :app module, package
@@ -185,7 +187,7 @@ jobs:
         run: |
           pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
           curl -sf -X POST -H 'Content-type: application/json' \
-            --data "{\"text\": \"[AI Code Review] :warning: Fix/review loop hit its cap (1 fix commit) — PR: ${pr_url}\nNeeds a human to look.\"}" \
+            --data "{\"text\": \"[AI Code Review] :warning: Fix/review loop hit its cap (3 fix commits) — PR: ${pr_url}\nNeeds a human to look.\"}" \
             "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
 
       - name: Notify Slack (failure)

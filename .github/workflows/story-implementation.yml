@@ -81,6 +81,8 @@ jobs:
           github_token: ${{ steps.app-token.outputs.token }}
           show_full_output: true
           display_report: true
+          bot_id: "320747005"
+          bot_name: "jw-company-developer-bot[bot]"
           prompt: |
             You are implementing a Jira story in the jw_player Android app
             (Kotlin, Jetpack Compose, single :app module, package
