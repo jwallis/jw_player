@@ -64,6 +64,7 @@ jobs:
         run: |
           git config user.name "jw-company-reviewer-bot[bot]"
           git config user.email "320745438+jw-company-reviewer-bot[bot]@users.noreply.github.com"
+          git config core.pager cat
 
       - name: Check iteration cap
         if: steps.staleness.outputs.stale == 'false'
@@ -99,11 +100,16 @@ jobs:
             changed.
 
             Your working directory is already the repo root for this entire
-            session and stays that way - run git commands directly (`git
-            status`, `git diff`, `git commit`, etc.), never with a `-C <path>`
-            flag or a `cd` first. A `-C`-prefixed git command will be denied
-            (it doesn't match this session's allowed command list) and will
-            look like a permission error, not a real problem to work around.
+            session and stays that way. Every git command you run must start
+            with exactly `git status`, `git diff`, `git log`, `git add`, or
+            `git commit` as the literal first words - no `-C <path>`, no
+            `-c <key>=<value>`, no `--no-pager`, no `cd` first, no piping
+            another command into git. Any of those will be denied outright
+            (they don't match this session's allowed command list) and will
+            look like a permission error, not a real problem to work around -
+            if you ever see "requires approval" on a git command, the fix is
+            to reissue it as a plain `git <subcommand> ...` with nothing
+            before the subcommand, not to find a workaround.
 
             You must end by writing a file named `.ai_review_verdict` at the
             repo root (it is git-ignored - never `git add` or commit it).

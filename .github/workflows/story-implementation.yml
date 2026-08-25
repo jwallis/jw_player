@@ -66,6 +66,7 @@ jobs:
         run: |
           git config user.name "jw-company-developer-bot[bot]"
           git config user.email "320747005+jw-company-developer-bot[bot]@users.noreply.github.com"
+          git config core.pager cat
           branch="${{ steps.meta.outputs.branch }}"
           # If this story was dispatched before, drop the stale branch and start clean from main.
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
@@ -115,11 +116,16 @@ jobs:
             the problem instead.
 
             Your working directory is already the repo root for this entire
-            session and stays that way - run git commands directly (`git
-            status`, `git diff`, `git commit`, etc.), never with a `-C <path>`
-            flag or a `cd` first. A `-C`-prefixed git command will be denied
-            (it doesn't match this session's allowed command list) and will
-            look like a permission error, not a real problem to work around.
+            session and stays that way. Every git command you run must start
+            with exactly `git status`, `git diff`, `git log`, `git add`, or
+            `git commit` as the literal first words - no `-C <path>`, no
+            `-c <key>=<value>`, no `--no-pager`, no `cd` first, no piping
+            another command into git. Any of those will be denied outright
+            (they don't match this session's allowed command list) and will
+            look like a permission error, not a real problem to work around -
+            if you ever see "requires approval" on a git command, the fix is
+            to reissue it as a plain `git <subcommand> ...` with nothing
+            before the subcommand, not to find a workaround.
 
             If, after genuine effort, this story cannot be implemented (too
             vague, contradictory, already done, or out of scope for this
