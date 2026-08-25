@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -73,6 +74,7 @@ fun MiniPlayer(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .testTag("now_playing_text")
                     .semantics { contentDescription = "Now playing: $titleLine" }
                     .basicMarquee(),
         )
@@ -87,6 +89,7 @@ fun MiniPlayer(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .testTag("elapsed_time_text")
                     .semantics { contentDescription = "Elapsed time $elapsed" },
         )
 
@@ -112,20 +115,21 @@ fun MiniPlayer(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onRestartOrPrevious) {
+            IconButton(onClick = onRestartOrPrevious, modifier = Modifier.testTag("previous_button")) {
                 Icon(Icons.Filled.SkipPrevious, contentDescription = "Restart or previous track")
             }
 
             HoldSeekButton(
                 icon = Icons.Filled.FastRewind,
                 contentDescription = "Seek backward",
+                testTag = "seek_backward_button",
                 direction = SeekDirection.BACKWARD,
                 onBegin = onBeginHoldSeek,
                 onTick = onHoldSeekTick,
                 onEndNormally = onEndHoldSeekNormally,
             )
 
-            IconButton(onClick = onTogglePlayPause) {
+            IconButton(onClick = onTogglePlayPause, modifier = Modifier.testTag("play_pause_button")) {
                 Icon(
                     imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (uiState.isPlaying) "Pause" else "Play",
@@ -135,13 +139,14 @@ fun MiniPlayer(
             HoldSeekButton(
                 icon = Icons.Filled.FastForward,
                 contentDescription = "Seek forward",
+                testTag = "seek_forward_button",
                 direction = SeekDirection.FORWARD,
                 onBegin = onBeginHoldSeek,
                 onTick = onHoldSeekTick,
                 onEndNormally = onEndHoldSeekNormally,
             )
 
-            IconButton(onClick = onNext) {
+            IconButton(onClick = onNext, modifier = Modifier.testTag("next_button")) {
                 Icon(Icons.Filled.SkipNext, contentDescription = "Next track")
             }
         }
@@ -168,6 +173,7 @@ private fun SeekBar(
         modifier =
             modifier
                 .height(24.dp)
+                .testTag("seek_bar")
                 .semantics { contentDescription = "Seek bar" }
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
@@ -213,6 +219,7 @@ private fun SeekBar(
 private fun HoldSeekButton(
     icon: ImageVector,
     contentDescription: String,
+    testTag: String,
     direction: SeekDirection,
     onBegin: () -> Unit,
     onTick: (SeekDirection, Long) -> Boolean,
@@ -224,6 +231,7 @@ private fun HoldSeekButton(
         modifier =
             Modifier
                 .size(48.dp)
+                .testTag(testTag)
                 .semantics(mergeDescendants = true) {
                     this.contentDescription = description
                     role = Role.Button

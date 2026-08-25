@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,26 +45,28 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             Mp3playerTheme {
-                var showSplash by remember { mutableStateOf(true) }
+                Box(modifier = Modifier.semantics { testTagsAsResourceId = true }) {
+                    var showSplash by remember { mutableStateOf(true) }
 
-                LaunchedEffect(Unit) {
-                    delay(1500)
-                    showSplash = false
-                }
+                    LaunchedEffect(Unit) {
+                        delay(1500)
+                        showSplash = false
+                    }
 
-                if (showSplash) {
-                    SplashScreen(modifier = Modifier.fillMaxSize())
-                } else {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
-                    ) {
-                        val playbackViewModel: PlaybackViewModel = viewModel()
-                        val settingsRepository = remember { SettingsRepository(applicationContext) }
-                        AppNavHost(
-                            playbackViewModel = playbackViewModel,
-                            settingsRepository = settingsRepository,
-                        )
+                    if (showSplash) {
+                        SplashScreen(modifier = Modifier.fillMaxSize())
+                    } else {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            val playbackViewModel: PlaybackViewModel = viewModel()
+                            val settingsRepository = remember { SettingsRepository(applicationContext) }
+                            AppNavHost(
+                                playbackViewModel = playbackViewModel,
+                                settingsRepository = settingsRepository,
+                            )
+                        }
                     }
                 }
             }
