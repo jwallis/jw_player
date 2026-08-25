@@ -115,6 +115,16 @@ jobs:
             fails and you cannot fix it, do not commit broken code — explain
             the problem instead.
 
+            Run every `./gradlew` command as a normal synchronous, foreground
+            Bash call - one call that blocks until the command finishes -
+            never in the background, and never with a `sleep`/polling loop
+            waiting on a background task notification. This CI environment
+            does not deliver background-task completion notifications the
+            way an interactive session does, so starting one and waiting for
+            it will stall until the step times out. If the command takes a
+            while, that's fine - the tool call simply returns when it's
+            actually done.
+
             Your working directory is already the repo root for this entire
             session and stays that way. Every git command you run must start
             with exactly `git status`, `git diff`, `git log`, `git add`, or

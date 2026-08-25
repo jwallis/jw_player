@@ -100,6 +100,16 @@ jobs:
             conventions. Diff this branch against origin/main to see what
             changed.
 
+            Run every `./gradlew` command as a normal synchronous, foreground
+            Bash call - one call that blocks until the command finishes -
+            never in the background, and never with a `sleep`/polling loop
+            waiting on a background task notification. This CI environment
+            does not deliver background-task completion notifications the
+            way an interactive session does, so starting one and waiting for
+            it will stall until the step times out. If the command takes a
+            while, that's fine - the tool call simply returns when it's
+            actually done.
+
             Your working directory is already the repo root for this entire
             session and stays that way. Every git command you run must start
             with exactly `git status`, `git diff`, `git log`, `git add`, or
@@ -182,18 +192,26 @@ jobs:
 
       - name: Notify Slack (fix pushed)
         if: steps.verdict.outputs.verdict == 'FIXED' && success()
+        env:
+          PR_URL: ${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}
+          REASON: ${{ steps.verdict.outputs.reason }}
         run: |
-          pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
+          payload=$(jq -n --arg pr_url "$PR_URL" --arg reason "$REASON" \
+            '{text: ("[AI Code Review] :arrows_counterclockwise: Requested changes, fix pushed — PR: " + $pr_url + "\nReason: " + $reason)}')
           curl -sf -X POST -H 'Content-type: application/json' \
-            --data "{\"text\": \"[AI Code Review] :arrows_counterclockwise: Requested changes, fix pushed — PR: ${pr_url}\nReason: ${{ steps.verdict.outputs.reason }}\"}" \
+            --data "$payload" \
             "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
 
       - name: Notify Slack (blocked)
         if: steps.verdict.outputs.verdict == 'BLOCKED'
+        env:
+          PR_URL: ${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}
+          REASON: ${{ steps.verdict.outputs.reason }}
         run: |
-          pr_url="${{ github.event.workflow_run.repository.html_url }}/pull/${{ steps.pr.outputs.number }}"
+          payload=$(jq -n --arg pr_url "$PR_URL" --arg reason "$REASON" \
+            '{text: ("[AI Code Review] :x: Blocked, needs a human — PR: " + $pr_url + "\nReason: " + $reason)}')
           curl -sf -X POST -H 'Content-type: application/json' \
-            --data "{\"text\": \"[AI Code Review] :x: Blocked, needs a human — PR: ${pr_url}\nReason: ${{ steps.verdict.outputs.reason }}\"}" \
+            --data "$payload" \
             "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
 
       - name: Notify Slack (iteration cap)
