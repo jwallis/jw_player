@@ -473,14 +473,94 @@ CLAUDE.md first," so a repo an AI agent writes in needs one; without it,
 Phase 6's generation step would have had nothing telling it about the unit-
 test convention, `mypy`, or that `standards.md` even exists.
 
+## Phase 6: built and exercised live for the first time (JWP-29)
+
+Two new workflows: `jw_player`'s `notify-automation.yml` (fires
+`repository_dispatch` at `jw_player_automation` when a merged `ai/story/*`
+PR closes, recovering Jira context from the PR body) and
+`jw_player_automation`'s `generate-test-automation.yml` (receives the
+dispatch, runs developer-bot/Claude to append a `test_cases.md` entry and
+an Appium scenario test built on the service layer, extending
+pages/services when needed, verifies independently with `pytest` + `mypy`,
+pushes straight to `main` - no PR gate on this repo).
+
+Ran a real story (JWP-29: "Update empty-library placeholder text to be
+friendlier," AC: change the empty-library text to read exactly `Hey man
+choose a root folder!`) through the full six-phase chain for the first
+time: Story Implementation -> Lint -> AI Code Review -> merge -> Notify
+Automation -> Generate Test Automation.
+
+**Result: the story failed its own acceptance criteria, and the pipeline
+merged it anyway.** AI Code Review's first pass didn't approve the literal
+text - it rewrote it, unprompted, from `Hey man choose a root folder!` to
+`No music yet — choose a folder to get started!`, citing "unprofessional/
+gendered slang" as its reason, committed that rewrite as a `[ai-review-fix]`
+commit, and re-triggered itself. The second pass approved and merged *that*
+version instead. Nothing in the pipeline compares shipped behavior against
+the actual AC - the independent re-verification step only checks that the
+code compiles and passes tests, not that it does what the story asked.
+Phase 6 then faithfully generated a test case and automation script for the
+reviewer's substituted text, and even noted in its own commit message that
+this text didn't match the literal AC - correctly diagnosing the mismatch
+it inherited, but with no mechanism to do anything about it. No human was
+in the loop at any point to catch this - exactly the risk the "no human
+code review anywhere" design accepts in exchange for full automation. This
+is a real gap, not a curiosity: a reviewer with unrestricted fix authority
+and no check against the original requirement can silently replace what
+was asked for with what it thinks should have been asked for.
+
+**Three real bugs found and fixed live, all pushed to `main` in both repos
+before the run above finished successfully:**
+
+1. **Slack `curl` steps broke on embedded quotes in AI-written free text.**
+   `ai-review.yml`'s "fix pushed"/"blocked" messages and
+   `generate-test-automation.yml`'s case-summary/blocked messages spliced a
+   model-generated reason or case title directly into a shell-quoted JSON
+   string; the FIXED-verdict reason above happened to contain literal
+   double quotes (`"Hey man..."`), which broke the shell quoting and
+   silently killed the Slack notification (curl exit 3, URL malformed) even
+   though the underlying commit/push had already succeeded. Fixed by
+   building every such payload with `jq -n --arg` from `env:`-passed values
+   instead of splicing into the JSON string directly - the same
+   env-not-splice pattern already used for shell commands, extended to JSON
+   payloads.
+2. **Claude stalled running `./gradlew` as a background task.** During the
+   same review run, Claude used the Bash tool's background-execution mode
+   to kick off `ktlintCheck`/`assembleDebug`/`testDebugUnitTest`, then spent
+   its entire turn polling/sleeping for a completion notification that this
+   CI environment (`claude-code-action`, not an interactive session) never
+   delivers - it never got a result back, never wrote `.ai_review_verdict`,
+   and the step failed with "Claude did not write .ai_review_verdict" after
+   burning several minutes doing nothing. Fixed by adding an explicit
+   prompt instruction to run `./gradlew`/`pytest`/`mypy` synchronously in
+   the foreground, applied to all three workflows that invoke build/test
+   commands (`story-implementation.yml`, `ai-review.yml`,
+   `generate-test-automation.yml`) since all three were equally exposed.
+3. **`generate-test-automation.yml`'s `claude-code-action` step refused to
+   run.** Its `repository_dispatch` trigger comes from `notify-automation.
+   yml` firing with developer-bot's own token, so `github.actor` for the
+   run is the bot itself - `claude-code-action` refuses bot-initiated
+   workflows by default, the same wrinkle already hit and fixed for
+   `ai-review.yml` back in Phase 3. Fixed with the same `allowed_bots`
+   input.
+
+**Also learned: `repository_dispatch` reruns don't re-resolve the workflow
+file from `main`.** After pushing the `allowed_bots` fix, `gh run rerun`
+replayed the exact same (pre-fix) failure - unlike `workflow_run`, which
+does pick up a `main`-branch fix on rerun (confirmed separately in the same
+session, re-running the stalled AI Code Review job). Worked around it by
+firing a brand-new `repository_dispatch` by hand (payload reconstructed
+from the merged PR's own data), which does resolve against current `main`.
+
 ## Status
 
-Phase 0, 1, 2, 3, and 5 are complete and verified end-to-end. JWP-2 proved
+Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
 Phases 0-1; JWP-3 proved the full Phase 1-3 pipeline including a real
-`APPROVE` + merge under `jw-company-reviewer-bot`'s own identity. Phase 4 is
-retired (folded into Phase 6). Phase 6 (`jw_player_automation`'s combined
-test case + Appium script generation, one dispatch from a story merge) is
-scoped in detail in the plan file, prerequisites in place, not yet built -
-the next real piece of work. Phase 7 (real AWS Device Farm) is untouched.
-Deprioritized/stretch: Jira status sync (Ready for AI -> Coded by AI ->
-Merged by AI). Still open: Gradle caching.
+`APPROVE` + merge under `jw-company-reviewer-bot`'s own identity; JWP-29
+proved the full Phase 1-6 chain for the first time, including a real
+failure mode (see above) - AI Code Review silently substituted its own copy
+for the story's literal acceptance criteria, and nothing downstream caught
+it. Phase 4 is retired (folded into Phase 6). Phase 7 (real AWS Device
+Farm) is untouched. Deprioritized/stretch: Jira status sync (Ready for AI
+-> Coded by AI -> Merged by AI). Known open items: Gradle caching, and the
+AC-vs-shipped-behavior gap exposed by JWP-29 (no design decided yet).
