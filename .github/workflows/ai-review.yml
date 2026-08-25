@@ -92,6 +92,7 @@ jobs:
           display_report: true
           bot_id: "320745438"
           bot_name: "jw-company-reviewer-bot[bot]"
+          allowed_bots: "jw-company-developer-bot[bot],jw-company-reviewer-bot[bot]"
           prompt: |
             You are reviewing a pull request in the jw_player Android app
             (Kotlin, Jetpack Compose, single :app module, package
