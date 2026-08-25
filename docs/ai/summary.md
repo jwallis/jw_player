@@ -463,6 +463,16 @@ is old news. Added as an explicit convention to `jwplayer`'s `CLAUDE.md`, and
 mirrored into the global `~/.claude/CLAUDE.md` so it applies to every future
 project, not just this one.
 
+## Phase 6 prep
+
+`jw-company-developer-bot`'s GitHub App is now installed on both repos (was
+`jw_player`-only) - `jw_player_automation` needs it to write directly there
+for Phase 6. `jw_player_automation` also got its own `CLAUDE.md` (didn't
+exist before) - every AI-agent prompt in this project opens with "read
+CLAUDE.md first," so a repo an AI agent writes in needs one; without it,
+Phase 6's generation step would have had nothing telling it about the unit-
+test convention, `mypy`, or that `standards.md` even exists.
+
 ## Status
 
 Phase 0, 1, 2, 3, and 5 are complete and verified end-to-end. JWP-2 proved
@@ -470,6 +480,7 @@ Phases 0-1; JWP-3 proved the full Phase 1-3 pipeline including a real
 `APPROVE` + merge under `jw-company-reviewer-bot`'s own identity. Phase 4 is
 retired (folded into Phase 6). Phase 6 (`jw_player_automation`'s combined
 test case + Appium script generation, one dispatch from a story merge) is
-scoped but not built - the next real piece of work. Phase 7 (real AWS Device
-Farm) is untouched. Also scoped but unbuilt: Jira status sync (Ready for AI
--> Coded by AI -> Merged by AI) and Gradle caching.
+scoped in detail in the plan file, prerequisites in place, not yet built -
+the next real piece of work. Phase 7 (real AWS Device Farm) is untouched.
+Deprioritized/stretch: Jira status sync (Ready for AI -> Coded by AI ->
+Merged by AI). Still open: Gradle caching.
