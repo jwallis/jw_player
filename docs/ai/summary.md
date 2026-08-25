@@ -351,11 +351,125 @@ bug that motivated the two-bot design is structurally fixed (reviewer-bot is a
 genuinely different actor now), but the merge step itself will get its first
 live exercise the next time a PR needs no fixes.
 
+## Phase 3 — first real APPROVE + merge (JWP-3)
+
+A real Jira story (JWP-3: add `testTag`/`testTagsAsResourceId` locators for
+Appium, separate from `contentDescription`) went through the whole pipeline
+for real, surfacing three more live bugs before finally reaching a clean
+merge:
+
+- **`git -C` broke the tool allowlist.** Claude's implementation run actually
+  wrote the correct code, then ran `git -C /home/runner/.../jw_player diff
+  --stat` - the `-C` prefix meant the command no longer started with `git
+  diff`, so it didn't match the `Bash(git diff:*)` allowlist pattern and got
+  denied as "requires approval" (impossible non-interactively). The whole run
+  ended without ever reaching `git commit` - real work, lost to a permission
+  string mismatch, not a decision by Claude. Fixed by telling Claude
+  explicitly that every git command must start with the bare subcommand - no
+  `-C`, `-c`, `--no-pager`, `cd`, or piping - and by setting `core.pager cat`
+  so there's no reason to reach for `--no-pager` in the first place. Not a
+  hard guarantee (the mutating commands stay tightly scoped on purpose, so
+  the allowlist can't just be widened) - but the failure mode is safe either
+  way: no commit means "no changes made," not a broken PR.
+- **`claude-code-action` refuses bot-initiated workflows by default.** Once
+  past the git bug, review failed instantly: `"Workflow initiated by
+  non-human actor: jw-company-developer-bot ... Add bot to allowed_bots
+  list."` Fixed with `allowed_bots: "jw-company-developer-bot[bot],
+  jw-company-reviewer-bot[bot]"` - explicitly, not `'*'`, since this repo is
+  public and `'*'` would let any external App invoke the action too.
+- **`create-github-app-token`'s `app-id` input is deprecated** in favor of
+  `client-id` (same value, new input name) - renamed across all three
+  workflows while in there.
+
+With those fixed, JWP-3 went all the way through: developer-bot implemented
+it, lint passed clean, reviewer-bot reviewed and wrote `APPROVE`, and
+**merged for real** - `mergedBy: app/jw-company-reviewer-bot`, a genuine merge
+commit. First full, unassisted proof of the entire Phase 1-3 pipeline. Cap
+raised from 1 to 3 fix commits afterward, now that the mechanism itself was
+proven live.
+
+## Phase 4 retired, `test_cases.md` moved to `jw_player_automation`
+
+Reconsidered mid-build: having QA test-case authoring live inside the app
+repo was a smell, especially once automation script generation was always
+going to happen in `jw_player_automation` anyway. Moved `docs/qa/
+test_cases.md` there (`user_stories.md` stays in `jw_player` - explicitly
+frozen retroactive backlog, not part of ongoing automation). The standalone
+`test-case-generation.yml` workflow (built, never run against a real merge)
+was deleted outright - Phase 6 now covers writing the test case *and* its
+automation script together, in one dispatch, rather than two separate
+cross-repo hops.
+
+## Phase 5 — `jw_player_automation` framework, complete
+
+Hand-built layered Python framework: config (`config.yaml` vs.
+`environments/` - only the Appium server URL, app package, and app activity
+are genuinely environment-specific), a driver wrapper owning all raw
+interaction (pages just hold a reference and delegate - never call
+`tap()`/`find_by()` themselves), page objects, services (user-action-named
+methods like `play_song`/`restart_song`, `validate_*` assertions - never
+"click"/"set" in a name), `exceptions`/`utils` each in their own directory.
+Rules captured in `docs/standards/standards.md` as the user specified them,
+not invented.
+
+**The locator strategy took real live debugging to get right, twice.**
+Decided early to locate by `testTag`/resource-id (Compose's
+`testTagsAsResourceId`), never `contentDescription` - deliberately, since
+content-desc is a translatable string and would break the moment the app
+supports more than one language. First pass tagged the outer clickable
+`Row`/`Button` for each element. Dumping the *actual* live accessibility tree
+(not just reading the Kotlin) showed the problem: Compose puts the tag on the
+container and the real displayed text on a separate child node with no
+resource-id of its own - `find_element(resource-id="root_folder_button")
+.text` returned `""`, the real value ("Music") was two nodes down. Tried
+`semantics(mergeDescendants = true)` next, since that fixed an analogous case
+elsewhere in the same dump (`seek_backward_button`) - turned out that one
+only worked because its sibling was `Icon(contentDescription = null)`, which
+never gets a semantics node in the first place, not because
+`mergeDescendants` generally collapses real `Text` content. Confirmed live
+that it does not (dumped again, same split-node problem, unchanged). Real
+fix: move `testTag` onto the inner `Text` itself, nothing on the outer
+container (tapping the labeled child still lands within the parent's
+clickable bounds). Toggle-state buttons (play/pause) went further - two
+distinct static tags per state instead of one tag plus a content-desc read,
+so state-reading never touches translatable text at all. Every fix verified
+against a real emulator dump, not just re-read Kotlin.
+
+**CI** (`.github/workflows/ci.yml`, this repo's first workflow): `pytest`
+(5 framework-wiring tests using a mocked driver, no device needed), `mypy`
+(caught a real type mismatch on its first run - `find_by()`'s return type
+didn't match what `WebDriverWait.until()` actually proves), and a stubbed
+`appium-run` job that echoes a fake AWS Device Farm result and posts
+`[Appium] passed (stub)` to Slack.
+
+## Jira: 25 stories imported, IDs backfilled
+
+Generated a CSV from the 25 retroactive `user_stories.md` entries (Summary/
+Description/Issue Type/Priority/Status columns, priorities judged by
+core-flow vs. polish) for manual Jira import - deliberately not committed,
+a one-time import artifact. Import landed as a flat `+3` offset
+(`PLAYER-NNN -> JWP-(NNN+3)`) - confirmed against 4 spot-checked mappings
+spanning the full range before trusting it for the rest. Backfilled real
+`Jira Issue ID` values into both `user_stories.md` and `test_cases.md`
+(replacing `TBD`) using that offset.
+
+## Lesson: comments/docs should say what's true now, not how it got there
+
+Caught adding narrative like "backfilled after importing X, using offset Y
+confirmed via Z spot-checks" into `test_cases.md`/`user_stories.md`'s intro
+comments - exactly the kind of change-log-shaped sentence that belongs in a
+commit message, not a file that has to stay readable long after the change
+is old news. Added as an explicit convention to `jwplayer`'s `CLAUDE.md`, and
+mirrored into the global `~/.claude/CLAUDE.md` so it applies to every future
+project, not just this one.
+
 ## Status
 
-Phase 0, Phase 1, Phase 2, and Phase 3 are complete and verified end-to-end - a
-real Jira story (JWP-2) went through Phases 0-1 and produced a real, working PR
-(<https://github.com/jwallis/jw_player/pull/1>); Phase 2's lint workflow and
-Phase 3's AI review workflow (including the FIXED-path fix/push/re-trigger
-loop) both ran successfully against that same PR, under their own dedicated
-bot identities. Next up is Phase 4 (AI test case generation).
+Phase 0, 1, 2, 3, and 5 are complete and verified end-to-end. JWP-2 proved
+Phases 0-1; JWP-3 proved the full Phase 1-3 pipeline including a real
+`APPROVE` + merge under `jw-company-reviewer-bot`'s own identity. Phase 4 is
+retired (folded into Phase 6). Phase 6 (`jw_player_automation`'s combined
+test case + Appium script generation, one dispatch from a story merge) is
+scoped but not built - the next real piece of work. Phase 7 (real AWS Device
+Farm) is untouched. Also scoped but unbuilt: Jira status sync (Ready for AI
+-> Coded by AI -> Merged by AI) and Gradle caching.
