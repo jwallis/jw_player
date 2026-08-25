@@ -25,6 +25,6 @@ class LibraryBrowserTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Hey man choose a root folder").assertExists()
+        composeTestRule.onNodeWithText("No music yet — choose a folder to get started!").assertExists()
     }
 }
