@@ -58,12 +58,11 @@ fun FolderListView(
                     Modifier
                         .fillMaxWidth()
                         .clickable(onClick = onBackClick)
-                        .testTag("back_row")
                         .semantics { contentDescription = "folder $backLabel" }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("$backLabel", style = MaterialTheme.typography.titleMedium)
+                Text("$backLabel", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("back_row"))
             }
         }
 
@@ -75,14 +74,13 @@ fun FolderListView(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable { onFolderClick(folder) }
-                                .testTag("folder_${folder.name.orEmpty()}")
                                 .semantics { contentDescription = "folder ${folder.name.orEmpty()}" }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.Folder, contentDescription = null)
                         Spacer(Modifier.width(12.dp))
-                        Text(folder.name.orEmpty())
+                        Text(folder.name.orEmpty(), modifier = Modifier.testTag("folder_${folder.name.orEmpty()}"))
                     }
                 }
                 items(listing.files, key = { it.uri.toString() }) { file ->
@@ -95,14 +93,17 @@ fun FolderListView(
                                 .fillMaxWidth()
                                 .background(background)
                                 .clickable { onFileClick(file) }
-                                .testTag("file_${DirectoryLister.displayName(file)}")
                                 .semantics { contentDescription = "file ${DirectoryLister.displayName(file)}" }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.MusicNote, contentDescription = null, tint = foreground)
                         Spacer(Modifier.width(12.dp))
-                        Text(DirectoryLister.displayName(file), color = foreground)
+                        Text(
+                            DirectoryLister.displayName(file),
+                            color = foreground,
+                            modifier = Modifier.testTag("file_${DirectoryLister.displayName(file)}"),
+                        )
                     }
                 }
             }

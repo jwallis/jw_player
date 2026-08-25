@@ -129,7 +129,10 @@ fun MiniPlayer(
                 onEndNormally = onEndHoldSeekNormally,
             )
 
-            IconButton(onClick = onTogglePlayPause, modifier = Modifier.testTag("play_pause_button")) {
+            IconButton(
+                onClick = onTogglePlayPause,
+                modifier = Modifier.testTag(if (uiState.isPlaying) "pause_button" else "play_button"),
+            ) {
                 Icon(
                     imageVector = if (uiState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (uiState.isPlaying) "Pause" else "Play",

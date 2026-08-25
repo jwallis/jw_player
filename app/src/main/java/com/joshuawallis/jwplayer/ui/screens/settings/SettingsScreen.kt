@@ -106,7 +106,6 @@ fun SettingsScreen(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .testTag("white_noise_file_button")
                             .semantics {
                                 contentDescription = whiteNoiseFileName?.let { "file $it" } ?: "Select white noise file"
                             },
@@ -115,12 +114,13 @@ fun SettingsScreen(
                         text = whiteNoiseFileName ?: "Select File",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("white_noise_file_button"),
                     )
                 }
 
                 Button(
                     onClick = { playbackViewModel.toggleWhiteNoise(whiteNoiseUri) },
-                    modifier = Modifier.testTag("white_noise_play_pause_button"),
+                    modifier = Modifier.testTag(if (whiteNoisePlaying) "white_noise_pause_button" else "white_noise_play_button"),
                     colors =
                         if (whiteNoisePlaying) {
                             ButtonDefaults.buttonColors(
@@ -148,7 +148,6 @@ fun SettingsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .testTag("root_folder_button")
                         .semantics {
                             contentDescription = rootFolderName?.let { "folder $it" } ?: "Select root folder"
                         },
@@ -157,6 +156,7 @@ fun SettingsScreen(
                     text = rootFolderName ?: "Select Folder",
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("root_folder_button"),
                 )
             }
         }
