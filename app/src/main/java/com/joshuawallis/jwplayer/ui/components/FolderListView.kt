@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ fun FolderListView(
                     Modifier
                         .fillMaxWidth()
                         .clickable(onClick = onBackClick)
+                        .testTag("back_row")
                         .semantics { contentDescription = "folder $backLabel" }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -73,6 +75,7 @@ fun FolderListView(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable { onFolderClick(folder) }
+                                .testTag("folder_${folder.name.orEmpty()}")
                                 .semantics { contentDescription = "folder ${folder.name.orEmpty()}" }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -92,6 +95,7 @@ fun FolderListView(
                                 .fillMaxWidth()
                                 .background(background)
                                 .clickable { onFileClick(file) }
+                                .testTag("file_${DirectoryLister.displayName(file)}")
                                 .semantics { contentDescription = "file ${DirectoryLister.displayName(file)}" }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -107,6 +111,7 @@ fun FolderListView(
                 ScrollEdgeIndicator(
                     icon = Icons.Filled.KeyboardArrowUp,
                     description = "More folders or files above",
+                    testTag = "scroll_up_indicator",
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
             }
@@ -114,6 +119,7 @@ fun FolderListView(
                 ScrollEdgeIndicator(
                     icon = Icons.Filled.KeyboardArrowDown,
                     description = "More folders or files below",
+                    testTag = "scroll_down_indicator",
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -125,6 +131,7 @@ fun FolderListView(
 private fun ScrollEdgeIndicator(
     icon: ImageVector,
     description: String,
+    testTag: String,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -133,6 +140,7 @@ private fun ScrollEdgeIndicator(
                 .fillMaxWidth()
                 .height(ROW_HEIGHT)
                 .background(MaterialTheme.colorScheme.background)
+                .testTag(testTag)
                 .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart,
     ) {

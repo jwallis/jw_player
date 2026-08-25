@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
@@ -48,7 +49,8 @@ fun MainScreen(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp),
+                        .padding(8.dp)
+                        .testTag("settings_icon"),
             ) {
                 Icon(Icons.Filled.Settings, contentDescription = "Settings")
             }

@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,7 +80,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -105,6 +106,7 @@ fun SettingsScreen(
                     modifier =
                         Modifier
                             .weight(1f)
+                            .testTag("white_noise_file_button")
                             .semantics {
                                 contentDescription = whiteNoiseFileName?.let { "file $it" } ?: "Select white noise file"
                             },
@@ -118,6 +120,7 @@ fun SettingsScreen(
 
                 Button(
                     onClick = { playbackViewModel.toggleWhiteNoise(whiteNoiseUri) },
+                    modifier = Modifier.testTag("white_noise_play_pause_button"),
                     colors =
                         if (whiteNoisePlaying) {
                             ButtonDefaults.buttonColors(
@@ -145,6 +148,7 @@ fun SettingsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .testTag("root_folder_button")
                         .semantics {
                             contentDescription = rootFolderName?.let { "folder $it" } ?: "Select root folder"
                         },
