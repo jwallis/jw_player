@@ -1,0 +1,92 @@
+name: Notify Automation
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'ai/story/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Generate developer-bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.DEVELOPER_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.DEVELOPER_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: jw_player_automation
+
+      - name: Recover story context from PR body
+        id: story
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          body=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json body -q .body)
+
+          issue_key=$(printf '%s\n' "$body" | sed -n 's/^- \*\*Key:\*\* *//p' | head -n1)
+          summary=$(printf '%s\n' "$body" | sed -n 's/^- \*\*Summary:\*\* *//p' | head -n1)
+          jira_url=$(printf '%s\n' "$body" | sed -n 's/^- \*\*Link:\*\* *//p' | head -n1)
+          description=$(printf '%s\n' "$body" | awk '/^## Description$/{flag=1; next} /^## Implementation$/{flag=0} flag')
+
+          if [ -z "$issue_key" ]; then
+            echo "::error::Could not recover Jira key from PR #$PR_NUMBER body — expected a '- **Key:** ...' line"
+            exit 1
+          fi
+
+          {
+            echo "issue_key=$issue_key"
+            echo "summary=$summary"
+            echo "jira_url=$jira_url"
+            echo "description<<STORY_DESC_EOF"
+            echo "$description"
+            echo "STORY_DESC_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fire repository_dispatch to jw_player_automation
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ISSUE_KEY: ${{ steps.story.outputs.issue_key }}
+          SUMMARY: ${{ steps.story.outputs.summary }}
+          DESCRIPTION: ${{ steps.story.outputs.description }}
+          JIRA_URL: ${{ steps.story.outputs.jira_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          SOURCE_REPO: ${{ github.repository }}
+        run: |
+          payload=$(jq -n \
+            --arg issue_key "$ISSUE_KEY" \
+            --arg summary "$SUMMARY" \
+            --arg description "$DESCRIPTION" \
+            --arg url "$JIRA_URL" \
+            --arg pr_number "$PR_NUMBER" \
+            --arg pr_url "$PR_URL" \
+            --arg base_sha "$BASE_SHA" \
+            --arg merge_sha "$MERGE_SHA" \
+            --arg source_repo "$SOURCE_REPO" \
+            '{event_type: "generate-test-automation", client_payload: {issue_key: $issue_key, summary: $summary, description: $description, url: $url, pr_number: $pr_number, pr_url: $pr_url, base_sha: $base_sha, merge_sha: $merge_sha, source_repo: $source_repo}}')
+          echo "$payload" | gh api "repos/${{ github.repository_owner }}/jw_player_automation/dispatches" --input -
+
+      - name: Notify Slack (dispatch sent)
+        if: success()
+        run: |
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"[Automation Dispatch] :white_check_mark: Sent — ${{ steps.story.outputs.issue_key }}: ${{ steps.story.outputs.summary }}\nPR: ${{ github.event.pull_request.html_url }}\"}" \
+            "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
+
+      - name: Notify Slack (dispatch failed)
+        if: failure()
+        run: |
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -sf -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \"[Automation Dispatch] :x: Failed to send — PR: ${{ github.event.pull_request.html_url }}\nRun: ${run_url}\"}" \
+            "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
