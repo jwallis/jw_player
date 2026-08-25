@@ -552,6 +552,52 @@ session, re-running the stalled AI Code Review job). Worked around it by
 firing a brand-new `repository_dispatch` by hand (payload reconstructed
 from the merged PR's own data), which does resolve against current `main`.
 
+## Judgment calls and direction that were the user's, not the AI's
+
+- Insisted `jw_player_automation` own the whole QA layer (test cases and
+  automation together) as a single repo, rather than splitting it further
+  or leaving `test_cases.md` in `jw_player` - caught "test cases in the app
+  repo is a weird smell" directly.
+- Set a standing rule for the life of the project: never invent a name
+  (repo, Slack app/bot/channel, workflow, AWS resource, Jira key) without
+  asking first.
+- Designed the automation framework's actual architecture (config/driver/
+  pages/services/exceptions/utils/tests layering) from 20 years of building
+  these at other companies, then gave explicit naming rules (`get_`/
+  `click_`/`open_`/`set_` page-method prefixes, user-action-named service
+  methods, `validate_*` for every assertion, exceptions/utils each in their
+  own directory) and two design concepts (the driver wrapper owns raw
+  interaction, not `BasePage`; config vs. environment split) - then caught
+  and fixed a real edge case in his own split (`app_package`/`app_activity`
+  can vary by build variant, moved to the environment file).
+- Called "we will not be using contentDesc for hooks" outright, correctly
+  identifying it as unsafe once the app supports more than one language -
+  this one call drove three real iterations (content-desc read ->
+  `mergeDescendants` -> tag-on-leaf-node) before landing on the locator
+  strategy actually verified live.
+- Named the historical-narrative-in-comments anti-pattern ("backfilled
+  after importing X using offset Y...") and asked for it to become a
+  permanent, account-wide convention, not just a one-off cleanup.
+- Named the parallel anti-pattern in acceptance criteria (don't define a
+  story by what it's NOT, e.g. "no other behavior changes") and asked for
+  that guardrail to live once in the bot's own instructions instead of
+  repeated in every story.
+- Set the no-squash-merge convention (real merge commits only) as a
+  standing preference.
+- Pushed back on wasting a full second CI cycle on a trivial test-case-only
+  follow-up PR - led directly to retiring Phase 4 and relocating
+  `test_cases.md` ownership to `jw_player_automation`.
+- Deliberately scoped Jira status sync as a stretch goal rather than
+  letting it creep into the main build.
+- Ran the pipeline live, repeatedly, rather than trusting it on paper -
+  this is how the JWP-29 AC-substitution failure, the Slack
+  quote-escaping bug, the backgrounded-gradle stall, and the
+  `allowed_bots` bug were all actually found.
+- After the JWP-29 incident, explicitly chose to put the "follow the AC
+  literally" guardrail on developer-bot's prompt specifically - a
+  deliberate call, made with full knowledge that reviewer-bot was the
+  actual bot that rewrote the text.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
