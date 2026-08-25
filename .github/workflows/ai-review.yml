@@ -100,6 +100,20 @@ jobs:
             conventions. Diff this branch against origin/main to see what
             changed.
 
+            This PR was already implemented upstream to match an approved
+            story's literal acceptance criteria - including any specific
+            string literals, copy, or wording the story asked for. Your job
+            is code correctness and convention, not product or content
+            judgment. Never rewrite a string literal, piece of copy, or
+            other deliberate content choice for taste, tone, or "this could
+            be worded better" reasons - that is not a bug and not a
+            convention violation, even if you'd have chosen different
+            wording yourself. If you genuinely think a piece of content is
+            wrong (offensive, factually incorrect, breaks a real
+            accessibility/legal requirement), that's a product decision, not
+            something to silently fix - use BLOCKED and explain it, don't
+            use FIXED to change it yourself.
+
             Run every `./gradlew` command as a normal synchronous, foreground
             Bash call - one call that blocks until the command finishes -
             never in the background, and never with a `sleep`/polling loop
@@ -129,8 +143,9 @@ jobs:
 
             - APPROVE: the change is correct, builds, and follows CLAUDE.md
               conventions as-is. Make no code changes.
-            - FIXED: you found real, fixable problems (bugs, convention
-              violations, missing error handling for reachable cases, etc.).
+            - FIXED: you found real, fixable code problems (bugs, convention
+              violations, missing error handling for reachable cases, etc.)
+              - never a rewrite of string literals/copy/wording, see above.
               Fix them directly, then run `./gradlew assembleDebug` and
               `./gradlew testDebugUnitTest` yourself and confirm both pass.
               Commit your fix locally with a message that starts with the
