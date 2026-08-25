@@ -110,6 +110,16 @@ jobs:
             files outside app/ and top-level Gradle config unless the story
             explicitly requires it.
 
+            Follow the acceptance criteria exactly as written - if the story
+            specifies literal text, values, or behavior, implement exactly
+            that, not your own idea of an improvement on it. Make no other
+            changes beyond what the story asks for: no unrelated refactors,
+            no rewording copy the story already specified, no "while I'm
+            here" fixes. If you believe the AC itself is genuinely wrong or
+            unsafe (not just a stylistic preference), implement it as
+            written anyway and say so in your final output rather than
+            silently substituting your own version.
+
             Run `./gradlew assembleDebug` and `./gradlew testDebugUnitTest`
             yourself and confirm both succeed before finishing. If either
             fails and you cannot fix it, do not commit broken code — explain
