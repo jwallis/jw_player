@@ -3,9 +3,7 @@
 Retroactive backlog covering the app's implemented functionality.
 Numbered PLAYER-001+. Grouped by epic for readability only. Frozen - Jira is
 the source of truth for stories going forward, this file isn't touched by
-automation. Each story's `Jira Issue ID` was backfilled after importing these
-into Jira (PLAYER-NNN -> JWP-(NNN+3), a flat offset confirmed against 4
-spot-checked imports spanning the full range).
+automation. Each story's `Jira Issue ID` links to its real Jira ticket.
 
 ## Epic: Library Browsing & Navigation
 
