@@ -656,6 +656,25 @@ designed in conversation; nothing built yet. Key decisions:
   (mocked-driver framework tests), and wiring the `jw-player-ci` IAM user's
   actual permissions + CI secrets.
 
+## Lesson: GitHub Actions workflow grouping matters - inter-workflow communication is hard
+
+A workflow's steps share a filesystem and step outputs freely; two separate
+*workflows* share almost nothing automatically. Every cross-workflow
+handoff in this project needed its own deliberate mechanism: `workflow_run`
+to gate one workflow on another's completion (`ai-review.yml` off `Lint`,
+`run-automation.yml` off `run-unit-tests-and-type-checks.yml`), a committed
+file to pass data forward (`last_generated_tests.txt` - a step output
+can't cross a workflow boundary, only something durably written to the
+repo or a downloadable artifact can), and `actions/download-artifact`'s
+cross-repo inputs to pull a build output out of a different repo entirely.
+Getting the grouping wrong costs real correctness, not just tidiness -
+`repository_dispatch` reruns turned out to replay a frozen pre-fix
+snapshot instead of re-resolving the workflow file from `main` (unlike
+`workflow_run`, which does), a surprise that only showed up because two
+workflows needed to hand off to each other correctly. Decide what one
+workflow is responsible for and how the next one downstream gets what it
+needs *before* writing the YAML, not after.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
