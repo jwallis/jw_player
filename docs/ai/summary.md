@@ -704,6 +704,16 @@ thing that *reliably executes* an automation run the same way every
 time - that's exactly the kind of deterministic, repeatable job a fixed
 script (what this investigation eventually produced) should own instead.
 
+## Observation: AI isn't necessarily good at lateral thinking
+
+There's a real tendency, once committed to a path, to keep digging deeper
+into it - adding another fix, another workaround, another layer of
+handling - rather than stopping, stepping back, and asking whether the
+whole approach is wrong. The user has repeatedly been the one to call this
+out and force a genuine pivot rather than another patch on the current
+theory. Worth deliberately checking for this rather than assuming more
+effort on the current path is the right next move.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
