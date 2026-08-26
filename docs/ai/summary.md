@@ -669,11 +669,9 @@ repo or a downloadable artifact can), and `actions/download-artifact`'s
 cross-repo inputs to pull a build output out of a different repo entirely.
 Getting the grouping wrong costs real correctness, not just tidiness -
 `repository_dispatch` reruns turned out to replay a frozen pre-fix
-snapshot instead of re-resolving the workflow file from `main` (unlike
-`workflow_run`, which does), a surprise that only showed up because two
-workflows needed to hand off to each other correctly. Decide what one
-workflow is responsible for and how the next one downstream gets what it
-needs *before* writing the YAML, not after.
+snapshot instead of re-resolving the workflow file from `main`. Decide
+what one workflow is responsible for and how the next one downstream gets
+what it needs *before* writing the YAML, not after.
 
 ## Status
 
