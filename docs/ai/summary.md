@@ -714,6 +714,33 @@ out and force a genuine pivot rather than another patch on the current
 theory. Worth deliberately checking for this rather than assuming more
 effort on the current path is the right next move.
 
+## Retrospective: the critical-path test saga
+
+Getting the critical-path playback test working for real took far longer
+than it should have. What actually got it unstuck:
+
+1. Don't dig in so hard - pull out and look for a different approach
+   entirely. The debug backdoor kept getting patched (timeout, implicit
+   wait, page-source refresh) instead of being questioned; ditching it for
+   the real SAF picker is what actually fixed the root cause.
+2. Simplify instead of testing whole-hog. When the critical-path test got
+   too tangled to debug, cutting it back to just the static empty-library
+   text (no backdoor, no upload, no playback) isolated the real, fixable
+   bug instead of chasing several failure modes bundled together.
+3. Green checkmarks aren't proof. A passing job status was checked and
+   double-checked against the actual pytest/Appium log output at every
+   step, since the checkmark alone was misleading more than once.
+4. Don't trust a reading of the evidence without checking it against real
+   code/behavior. A wrong read of a UI element's semantics got corrected
+   by verifying against the actual source instead of arguing from memory.
+5. Local repro beats iterating on real hardware. Every real fix (locator
+   strategy, scoped storage, case-sensitivity) came from a local emulator
+   loop measured in seconds, not a real-device loop measured in minutes.
+6. A plausible theory isn't a confirmed one. Several theories that sounded
+   right (implicit-wait interaction, page-source caching, prefetch timing)
+   were each wrong - only direct verification (MediaStore queries, live
+   page dumps, logcat, a clean local repro) actually settled anything.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
