@@ -22,7 +22,10 @@ class TestSetRootFolderReceiver : BroadcastReceiver() {
         intent: Intent,
     ) {
         val path = intent.getStringExtra(EXTRA_PATH) ?: return
-        SettingsRepository(context).setRootFolderUri(Uri.fromFile(File(path)))
+        // commit(), not the shared setRootFolderUri()'s apply() - the test
+        // that triggers this broadcast force-stops the app right after,
+        // which can bypass apply()'s normal async-flush safety net.
+        SettingsRepository(context).setRootFolderUriSync(Uri.fromFile(File(path)))
     }
 
     companion object {

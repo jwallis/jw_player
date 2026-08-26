@@ -15,6 +15,14 @@ class SettingsRepository(
         prefs.edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).apply()
     }
 
+    /** Synchronous variant for callers that might not survive an async
+     * apply() flush - namely the debug-only automation backdoor, which sets
+     * this immediately before a force-stop (see
+     * debug/TestSetRootFolderReceiver.kt). Not for regular UI use. */
+    fun setRootFolderUriSync(uri: Uri) {
+        prefs.edit().putString(KEY_ROOT_FOLDER_URI, uri.toString()).commit()
+    }
+
     fun getWhiteNoiseUri(): Uri? = prefs.getString(KEY_WHITE_NOISE_URI, null)?.toUri()
 
     fun setWhiteNoiseUri(uri: Uri) {
