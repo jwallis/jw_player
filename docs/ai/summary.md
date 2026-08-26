@@ -673,6 +673,24 @@ snapshot instead of re-resolving the workflow file from `main`. Decide
 what one workflow is responsible for and how the next one downstream gets
 what it needs *before* writing the YAML, not after.
 
+## Lesson: we went too fast against real Device Farm hardware - should have slowed down and verified locally
+
+Chasing a real-device `ElementNotFoundError`, several rounds went straight
+to push-and-rerun against real AWS Device Farm hardware - a longer
+timeout, removing an implicit wait, a page-source cache-refresh - each one
+plausible, each one a real minutes-long round trip (CI chain, a paid
+device run, pulling logs back down), and none of them the actual bug.
+The real fix only surfaced once that loop stopped: a local Android
+emulator plus a local Appium server reproduced the exact failure in
+seconds, which made it possible to isolate the true cause directly -
+`AppiumBy.ID` never matches these bare Compose `testTag` resource-ids on
+this UiAutomator2 driver version, while a raw `UiSelector().resourceId()`
+query matches immediately - and to verify the fix by literally watching it
+pass against a running app before ever pushing. Real hardware is for
+final confirmation, not for iterating on a hypothesis; the local
+emulator/Appium loop should have been the first move, not the fourth or
+fifth.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
