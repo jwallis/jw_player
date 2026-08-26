@@ -197,6 +197,14 @@ jobs:
           gh pr review "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --approve --body "Approved by AI Code Review - no issues found."
           gh pr merge "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}" --merge --delete-branch
 
+      - name: Upload APK artifact for Device Farm
+        if: steps.verdict.outputs.verdict == 'APPROVE' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
       - name: Notify Slack (approved and merged)
         if: steps.verdict.outputs.verdict == 'APPROVE' && success()
         run: |
