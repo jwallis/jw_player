@@ -598,15 +598,72 @@ from the merged PR's own data), which does resolve against current `main`.
   deliberate call, made with full knowledge that reviewer-bot was the
   actual bot that rewrote the text.
 
+## JWP-29 follow-up: closed the AC-substitution gap
+
+Reviewer-bot's fix authority was unrestricted, so it silently rewrote a
+story's literal acceptance-criteria text. Fixed on both sides: developer-bot's
+prompt now says to follow AC exactly and make no unrequested changes;
+reviewer-bot's prompt now scopes its FIXED authority to code
+correctness/convention only - never rewriting a string literal, copy, or
+wording choice, even one it disagrees with. A genuine content concern goes
+to BLOCKED (human-visible) instead of a silent rewrite. Verified on JWP-30:
+clean `APPROVE`, no fix cycle, ~16 minutes start to finish including the
+`jw_player_automation` CI run.
+
+## Phase 7: scoped in detail, not yet built
+
+Replaces the `appium-run` stub with a real AWS Device Farm run. Fully
+designed in conversation; nothing built yet. Key decisions:
+
+- **Three separate workflow files**, not one, so generation/verification/
+  running can each fail independently: `create-tcs-and-automation-scripts.yml`
+  (renamed from `generate-test-automation.yml`) writes the TC + script + a
+  small manifest of what's new; `run-unit-tests-and-type-checks.yml`
+  (renamed from `ci.yml`) runs on that push; `run-automation.yml` (new)
+  triggers via `workflow_run` off *that* succeeding - same gating pattern
+  `ai-review.yml` already uses off `Lint` - so real device-minutes are never
+  spent against code whose fresh test/type-check run hasn't passed.
+- **AWS Device Farm project: "JW Company Device Farm," a 1-device pool**
+  (one known Android version/model - confirmed via AWS's own docs that a
+  pool doesn't shard a suite, every device runs the whole thing
+  independently, so more devices only multiplies cost here, doesn't
+  parallelize). Setup will be done interactively with the user in the AWS
+  console, deliberately, as a hands-on AWS learning exercise.
+- **Every push runs only the new script(s) from that push + one standing
+  critical-path smoke test** (play a known song, confirm the timer
+  advances) - not a full regression of the whole accumulated suite.
+  "What's new" comes from a manifest file `create-tcs-and-automation-
+  scripts.yml` writes in its own commit, not from inferring it via
+  `git diff` (considered and rejected - breaks on multi-commit pushes,
+  can't tell modified from newly-added, and rename quirks would bite once
+  `tests/`/`unittests/` splits, so the process that wrote the file just
+  declares what it wrote instead).
+- **Test data:** real fixture files (mixed extensions/case, nested
+  folders) the user is building, delivered via Device Farm's built-in
+  "Extra Data" package (auto-extracted onto the device before any test
+  runs, including the folder structure for free).
+- **Root folder selection uses a debug-only backdoor** (a broadcast intent
+  setting the path directly), not the real system folder picker - that
+  picker is already marked "not automatable" in `test_cases.md` and stays
+  out of scope; every other test calls the backdoor per-test via a pytest
+  fixture.
+- **Slack gets a full per-test pass/fail list + a link to the AWS run/log**
+  - no screenshots or video links.
+- Still open: how the built APK gets from `jw_player` to AWS (two hops -
+  GitHub Actions artifact, then Device Farm's own `CreateUpload` - since
+  Device Farm won't pull from an arbitrary URL), splitting `tests/`
+  (scenario tests, what Device Farm runs) from a new `unittests/`
+  (mocked-driver framework tests), and wiring the `jw-player-ci` IAM user's
+  actual permissions + CI secrets.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
 Phases 0-1; JWP-3 proved the full Phase 1-3 pipeline including a real
 `APPROVE` + merge under `jw-company-reviewer-bot`'s own identity; JWP-29
-proved the full Phase 1-6 chain for the first time, including a real
-failure mode (see above) - AI Code Review silently substituted its own copy
-for the story's literal acceptance criteria, and nothing downstream caught
-it. Phase 4 is retired (folded into Phase 6). Phase 7 (real AWS Device
-Farm) is untouched. Deprioritized/stretch: Jira status sync (Ready for AI
--> Coded by AI -> Merged by AI). Known open items: Gradle caching, and the
-AC-vs-shipped-behavior gap exposed by JWP-29 (no design decided yet).
+proved the full Phase 1-6 chain for the first time and exposed the
+AC-substitution gap (closed, see above); JWP-30 proved the fix with a clean
+run. Phase 4 is retired (folded into Phase 6). Phase 7 (real AWS Device
+Farm) is scoped in detail but not yet built - the next real piece of work.
+Deprioritized/stretch: Jira status sync (Ready for AI -> Coded by AI ->
+Merged by AI). Known open items: Gradle caching.
