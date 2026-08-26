@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.documentfile.provider.DocumentFile
 import com.joshuawallis.jwplayer.data.AUDIO_EXTENSIONS
 import com.joshuawallis.jwplayer.data.DirectoryLister
@@ -31,7 +32,10 @@ fun LibraryBrowser(
 ) {
     if (rootFolderDoc == null || currentFolderDoc == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Choose a root folder to get started, then we can listen to some music!")
+            Text(
+                "Choose a root folder to get started, then we can listen to some music!",
+                modifier = Modifier.testTag("empty_library_message"),
+            )
         }
         return
     }
