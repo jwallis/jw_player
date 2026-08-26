@@ -66,6 +66,29 @@ they're needed to know which app a workflow run authenticated as.
 Both: Repository permissions `Contents: Read & write`, `Pull requests: Read &
 write`; installed on `jw_player` only.
 
+## Jira status sync
+
+- **Jira site:** `https://joshuawallis.atlassian.net` (not sensitive — used
+  directly in `.github/scripts/transition_jira_issue.sh`, present identically
+  in both `jw_player` and `jw_player_automation`).
+- **`JIRA_EMAIL` / `JIRA_API_TOKEN`** — an Atlassian API token
+  (`id.atlassian.com/manage-profile/security/api-tokens`) paired with the
+  account email, used for Basic Auth against the Jira Cloud REST API
+  (`/rest/api/3/issue/{key}/transitions`) to move an issue's status as the
+  pipeline progresses (`Ready for AI` → `AI Coding` → `AI Testing` → `Done`,
+  or `AI Coding Failed`/`AI Testing Failed` on the way). Stored as GitHub
+  Actions secrets in **both** `jw_player` and `jw_player_automation` (every
+  workflow stage transitions the issue itself), set via:
+  `gh secret set JIRA_EMAIL --repo jwallis/jw_player`
+  `gh secret set JIRA_API_TOKEN --repo jwallis/jw_player`
+  (repeat both for `jwallis/jw_player_automation`) — write-only once set,
+  same as every other secret here.
+- A failed Jira call never fails the calling workflow step — same
+  non-blocking treatment as the Slack notifications. The transition script
+  looks up the target transition by status *name* (not a hardcoded id) so a
+  Jira workflow reconfiguration can't silently break it; a name that doesn't
+  match anything just logs a warning.
+
 <!--
   Where the Client ID actually gets used: it's the `app-id` input to
   actions/create-github-app-token in the workflow (accepts either the numeric

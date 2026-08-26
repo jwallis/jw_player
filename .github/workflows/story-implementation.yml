@@ -47,6 +47,12 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
+      - name: Transition Jira issue (AI Coding)
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: bash .github/scripts/transition_jira_issue.sh "${{ github.event.client_payload.issue_key }}" "AI Coding"
+
       - name: Compute branch name
         id: meta
         env:
@@ -246,6 +252,13 @@ jobs:
           curl -sf -X POST -H 'Content-type: application/json' --data "$payload" \
             "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
 
+      - name: Transition Jira issue (AI Coding Failed - no changes)
+        if: steps.changes.outputs.has_changes == 'false' && success()
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: bash .github/scripts/transition_jira_issue.sh "${{ github.event.client_payload.issue_key }}" "AI Coding Failed"
+
       - name: Notify Slack (no changes made)
         if: steps.changes.outputs.has_changes == 'false' && success()
         env:
@@ -271,3 +284,13 @@ jobs:
             '{text: ("[Story Implementation] :x: Failed — " + $key + ": " + $summary + "\nRun: " + $run_url + "\nJira: " + $jira_url)}')
           curl -sf -X POST -H 'Content-type: application/json' --data "$payload" \
             "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
+
+      - name: Transition Jira issue (AI Coding Failed)
+        if: failure()
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          if [ -f .github/scripts/transition_jira_issue.sh ]; then
+            bash .github/scripts/transition_jira_issue.sh "${{ github.event.client_payload.issue_key }}" "AI Coding Failed"
+          fi

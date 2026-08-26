@@ -23,6 +23,9 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: jw_player_automation
 
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Recover story context from PR body
         id: story
         env:
@@ -83,6 +86,13 @@ jobs:
             --data "{\"text\": \"[Automation Dispatch] :white_check_mark: Sent — ${{ steps.story.outputs.issue_key }}: ${{ steps.story.outputs.summary }}\nPR: ${{ github.event.pull_request.html_url }}\"}" \
             "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
 
+      - name: Transition Jira issue (AI Testing)
+        if: success()
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: bash .github/scripts/transition_jira_issue.sh "${{ steps.story.outputs.issue_key }}" "AI Testing"
+
       - name: Notify Slack (dispatch failed)
         if: failure()
         run: |
@@ -90,3 +100,10 @@ jobs:
           curl -sf -X POST -H 'Content-type: application/json' \
             --data "{\"text\": \"[Automation Dispatch] :x: Failed to send — PR: ${{ github.event.pull_request.html_url }}\nRun: ${run_url}\"}" \
             "${{ secrets.SLACK_JW_PLAYER_CI_WEBHOOK_URL }}"
+
+      - name: Transition Jira issue (AI Testing Failed - dispatch)
+        if: failure() && steps.story.outputs.issue_key != ''
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: bash .github/scripts/transition_jira_issue.sh "${{ steps.story.outputs.issue_key }}" "AI Testing Failed"
