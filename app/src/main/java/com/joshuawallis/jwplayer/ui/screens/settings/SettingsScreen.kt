@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import com.joshuawallis.jwplayer.playback.PlaybackMode
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,7 +167,19 @@ fun SettingsScreen(
 private fun treeDocumentName(
     context: Context,
     treeUri: Uri,
-): String = DocumentFile.fromTreeUri(context, treeUri)?.name.orEmpty()
+): String {
+    // A "file" scheme means the debug-only test backdoor set this URI
+    // directly (see NavGraph.kt), not a real SAF tree grant, so it needs
+    // DocumentFile.fromFile instead of fromTreeUri - which throws on a
+    // non-tree URI. Never happens in a release build.
+    val doc =
+        if (treeUri.scheme == "file") {
+            treeUri.path?.let { path -> DocumentFile.fromFile(File(path)) }
+        } else {
+            DocumentFile.fromTreeUri(context, treeUri)
+        }
+    return doc?.name.orEmpty()
+}
 
 private fun singleDocumentName(
     context: Context,
