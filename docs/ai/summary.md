@@ -741,6 +741,22 @@ than it should have. What actually got it unstuck:
    were each wrong - only direct verification (MediaStore queries, live
    page dumps, logcat, a clean local repro) actually settled anything.
 
+## Observation: where to draw the line between AI judgment and deterministic code
+
+Jira status sync (see Status below) initially had Claude write a commit
+trailer (`Jira-Issue: <KEY>`) so a downstream workflow could recover which
+issue to update - even though the *workflow* already had that value from
+its own trigger payload the whole time. Asking an AI to reliably reproduce
+an exact string format works most of the time, but "most of the time" is
+the wrong bar for something a script can just guarantee. Fixed by having
+the workflow itself stamp the trailer onto Claude's commit after the fact
+(`git commit --amend`), so the AI decides *what* to commit and the
+workflow deterministically guarantees *this one line* is present - zero
+dependence on AI compliance for something that was never actually an AI
+decision. General rule: if the calling code already has a value, don't
+route it through the AI's output just because the AI is the one making
+the commit/PR/file it needs to land in.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
@@ -750,5 +766,6 @@ proved the full Phase 1-6 chain for the first time and exposed the
 AC-substitution gap (closed, see above); JWP-30 proved the fix with a clean
 run. Phase 4 is retired (folded into Phase 6). Phase 7 (real AWS Device
 Farm) is scoped in detail but not yet built - the next real piece of work.
-Deprioritized/stretch: Jira status sync (Ready for AI -> Coded by AI ->
-Merged by AI). Known open items: Gradle caching.
+Jira status sync is built (Ready for AI -> AI Coding -> AI Testing -> Done,
+with AI Coding Failed / AI Testing Failed on failure paths) - wired but not
+yet proven against a real story run. Known open items: Gradle caching.
