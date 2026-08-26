@@ -16,6 +16,7 @@ import com.joshuawallis.jwplayer.data.SettingsRepository
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
 import com.joshuawallis.jwplayer.ui.screens.main.MainScreen
 import com.joshuawallis.jwplayer.ui.screens.settings.SettingsScreen
+import java.io.File
 
 object Route {
     const val MAIN = "main"
@@ -34,7 +35,18 @@ fun AppNavHost(
     var whiteNoiseUri by remember { mutableStateOf(settingsRepository.getWhiteNoiseUri()) }
     val rootFolderDoc =
         remember(rootFolderUri) {
-            rootFolderUri?.let { DocumentFile.fromTreeUri(context, it) }
+            rootFolderUri?.let { uri ->
+                // A "file" scheme means the debug-only test backdoor set this
+                // (see debug/TestSetRootFolderReceiver.kt) - a plain path, not
+                // a real SAF tree grant, so it needs DocumentFile.fromFile
+                // instead of fromTreeUri. Never happens in a release build,
+                // since that receiver only exists in the debug source set.
+                if (uri.scheme == "file") {
+                    uri.path?.let { path -> DocumentFile.fromFile(File(path)) }
+                } else {
+                    DocumentFile.fromTreeUri(context, uri)
+                }
+            }
         }
     var currentFolderDoc by remember(rootFolderDoc) { mutableStateOf(rootFolderDoc) }
 
