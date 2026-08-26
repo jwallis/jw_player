@@ -691,6 +691,19 @@ final confirmation, not for iterating on a hypothesis; the local
 emulator/Appium loop should have been the first move, not the fourth or
 fifth.
 
+## Observation: where AI actually earns its keep in test automation
+
+Across this whole debugging arc (locator strategy, scoped storage, the
+prefetch/file-visibility rabbit hole, the SAF-picker automation that
+finally fixed it), the useful work wasn't executing a fixed script and
+hoping - it was exploring: reading real logs, forming a hypothesis,
+testing it directly against a live emulator, discarding it when the
+evidence didn't hold, and forming the next one. An AI is well-suited to
+that kind of open-ended investigation. It's much less suited to being the
+thing that *reliably executes* an automation run the same way every
+time - that's exactly the kind of deterministic, repeatable job a fixed
+script (what this investigation eventually produced) should own instead.
+
 ## Status
 
 Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
