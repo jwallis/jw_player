@@ -33,7 +33,7 @@ fun LibraryBrowser(
     if (rootFolderDoc == null || currentFolderDoc == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                "Choose a root folder to get started, then we can listen to some music!",
+                "Please choose a root folder to get started.",
                 modifier = Modifier.testTag("empty_library_message"),
             )
         }
