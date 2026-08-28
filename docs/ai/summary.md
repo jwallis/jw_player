@@ -656,6 +656,54 @@ designed in conversation; nothing built yet. Key decisions:
   (mocked-driver framework tests), and wiring the `jw-player-ci` IAM user's
   actual permissions + CI secrets.
 
+## Phase 7: built and verified end-to-end
+
+Real AWS Device Farm execution replaced the `appium-run` stub, matching
+the three-workflow split above with one real change from the original
+plan: root folder selection uses the actual Storage Access Framework
+picker, not the debug-only backdoor originally scoped - see the
+critical-path test saga above for why the backdoor was dropped.
+`run_device_farm.py` handles upload, scheduling, polling, and per-test
+result collection; `run-automation.yml` gates on `run-unit-tests-and-
+type-checks.yml`'s success via `workflow_run`, same pattern as
+`ai-review.yml`. Verified with two consecutive fully-passing real Device
+Farm runs during the critical-path debugging saga, then repeatedly again
+(JWP-34 through JWP-37) while proving Jira status sync end-to-end - each
+one a real `PASSED` result read from the actual run, not just a green
+checkmark.
+
+## Jira status sync: built and verified end-to-end
+
+A story's Jira issue moves through six real states as the pipeline runs
+(Ready for AI -> AI Coding -> AI Testing -> Done, or AI Coding Failed /
+AI Testing Failed on the failure paths) - see the deterministic-trailer
+lesson above for how `run-automation.yml` (which has no dispatch payload
+of its own, only a `push` trigger) recovers which issue to update. Every
+transition call looks up the target transition by name via Jira's own
+REST API rather than a hardcoded id, and never fails the calling workflow
+step - same non-blocking treatment as Slack.
+
+A real Jira gotcha found live: a transition's own name and the status it
+leads to are two separate fields in Jira's data model. A workflow edge
+can be labeled "In Progress" (or any leftover default name) while its
+actual destination status is "AI Coding" - renaming a status never
+renames the edge pointing to it. The fix was on the Jira side (rename the
+transition to match its destination), not the script - matching a
+transition by `.name` is correct; the trap is assuming a transition's
+name always matches the status it leads to.
+
+Also found live: `curl -sf` swallows the real HTTP status and response
+body on failure, collapsing every possible cause (wrong site, bad auth,
+wrong issue key, network error) into one useless "could not fetch"
+message. Fixed by capturing the status code and body explicitly instead
+of relying on `-f` to fail silently - worth doing by default in any
+script whose only observability is its own logged output, since there's
+no debugger to attach to a GitHub Actions run after the fact.
+
+Proven clean end-to-end four times in a row (JWP-34 through JWP-37) with
+zero manual intervention, once the API token and the Jira workflow's
+transition name were both fixed.
+
 ## Lesson: GitHub Actions workflow grouping matters - inter-workflow communication is hard
 
 A workflow's steps share a filesystem and step outputs freely; two separate
@@ -759,13 +807,14 @@ the commit/PR/file it needs to land in.
 
 ## Status
 
-Phase 0, 1, 2, 3, 5, and 6 are built and verified end-to-end. JWP-2 proved
-Phases 0-1; JWP-3 proved the full Phase 1-3 pipeline including a real
-`APPROVE` + merge under `jw-company-reviewer-bot`'s own identity; JWP-29
-proved the full Phase 1-6 chain for the first time and exposed the
-AC-substitution gap (closed, see above); JWP-30 proved the fix with a clean
-run. Phase 4 is retired (folded into Phase 6). Phase 7 (real AWS Device
-Farm) is scoped in detail but not yet built - the next real piece of work.
-Jira status sync is built (Ready for AI -> AI Coding -> AI Testing -> Done,
-with AI Coding Failed / AI Testing Failed on failure paths) - wired but not
-yet proven against a real story run. Known open items: Gradle caching.
+Phases 0 through 7 are all built and verified end-to-end, plus Jira status
+sync. JWP-2 proved Phases 0-1; JWP-3 proved the full Phase 1-3 pipeline
+including a real `APPROVE` + merge under `jw-company-reviewer-bot`'s own
+identity; JWP-29 proved the full Phase 1-6 chain for the first time and
+exposed the AC-substitution gap (closed, see above); JWP-30 proved the fix
+with a clean run; the critical-path test saga proved Phase 7 (real AWS
+Device Farm) with two consecutive passing runs; JWP-34 through JWP-37 each
+proved the full pipeline including Jira status sync, clean and unattended.
+Phase 4 is retired (folded into Phase 6). Known open items: Gradle caching,
+and Jira status sync's dispatch-failure edge case (`AI Testing Failed` on a
+failed `repository_dispatch` send) has never actually fired in practice.
