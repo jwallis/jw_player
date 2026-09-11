@@ -145,14 +145,10 @@ class PlaybackViewModel(
         }
     }
 
-    /** Button 3e: next file, wrapping to the first file if currently on the last. */
+    /** Button 3e: next file. Does not wrap when already on the last file. */
     fun next() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-        if (player?.hasNextMediaItem() == true) {
-            player?.seekToNextMediaItem()
-        } else {
-            player?.seekTo(0, 0)
-        }
+        player?.seekToNextMediaItem()
         player?.play()
     }
 
@@ -190,11 +186,7 @@ class PlaybackViewModel(
                 val target = current + delta
                 if (target >= duration) {
                     player?.volume = 1f
-                    if (player?.hasNextMediaItem() == true) {
-                        player?.seekToNextMediaItem()
-                    } else {
-                        player?.seekTo(0, 0)
-                    }
+                    player?.seekToNextMediaItem()
                     player?.play()
                     true
                 } else {
