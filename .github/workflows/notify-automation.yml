@@ -37,6 +37,7 @@ jobs:
           issue_key=$(printf '%s\n' "$body" | sed -n 's/^- \*\*Key:\*\* *//p' | head -n1)
           summary=$(printf '%s\n' "$body" | sed -n 's/^- \*\*Summary:\*\* *//p' | head -n1)
           jira_url=$(printf '%s\n' "$body" | sed -n 's/^- \*\*Link:\*\* *//p' | head -n1)
+          issue_type=$(printf '%s\n' "$body" | sed -n 's/^- \*\*Type:\*\* *//p' | head -n1)
           description=$(printf '%s\n' "$body" | awk '/^## Description$/{flag=1; next} /^## Implementation$/{flag=0} flag')
 
           if [ -z "$issue_key" ]; then
@@ -48,6 +49,7 @@ jobs:
             echo "issue_key=$issue_key"
             echo "summary=$summary"
             echo "jira_url=$jira_url"
+            echo "issue_type=$issue_type"
             echo "description<<STORY_DESC_EOF"
             echo "$description"
             echo "STORY_DESC_EOF"
@@ -60,6 +62,7 @@ jobs:
           SUMMARY: ${{ steps.story.outputs.summary }}
           DESCRIPTION: ${{ steps.story.outputs.description }}
           JIRA_URL: ${{ steps.story.outputs.jira_url }}
+          ISSUE_TYPE: ${{ steps.story.outputs.issue_type }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -71,12 +74,13 @@ jobs:
             --arg summary "$SUMMARY" \
             --arg description "$DESCRIPTION" \
             --arg url "$JIRA_URL" \
+            --arg issue_type "$ISSUE_TYPE" \
             --arg pr_number "$PR_NUMBER" \
             --arg pr_url "$PR_URL" \
             --arg base_sha "$BASE_SHA" \
             --arg merge_sha "$MERGE_SHA" \
             --arg source_repo "$SOURCE_REPO" \
-            '{event_type: "generate-test-automation", client_payload: {issue_key: $issue_key, summary: $summary, description: $description, url: $url, pr_number: $pr_number, pr_url: $pr_url, base_sha: $base_sha, merge_sha: $merge_sha, source_repo: $source_repo}}')
+            '{event_type: "generate-test-automation", client_payload: {issue_key: $issue_key, summary: $summary, description: $description, url: $url, issue_type: $issue_type, pr_number: $pr_number, pr_url: $pr_url, base_sha: $base_sha, merge_sha: $merge_sha, source_repo: $source_repo}}')
           echo "$payload" | gh api "repos/${{ github.repository_owner }}/jw_player_automation/dispatches" --input -
 
       - name: Notify Slack (dispatch sent)

@@ -109,7 +109,7 @@ confusion (pure rename, not a feature merge - Jira projects are now labeled
 "Spaces" in the UI). Added workflow status "Ready for AI," reachable from any other
 status. Built a Flow (Jira's renamed "Automation rule"): trigger = issue
 transitions to "Ready for AI" -> sends a `POST` to GitHub's `repository_dispatch`
-endpoint for `jw_player`, with `event_type: "story-ready-for-ai"` and the issue
+endpoint for `jw_player`, with `event_type: "work-item-ready-for-ai"` and the issue
 key/summary/URL as payload. Auth: a classic GitHub PAT (`repo` scope), pasted
 directly into the Flow's request header - no Jira secrets vault was available on
 this plan, so it's plaintext there (documented, not hidden). **Tested

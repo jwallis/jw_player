@@ -2,7 +2,7 @@ name: Story Implementation
 
 on:
   repository_dispatch:
-    types: [story-ready-for-ai]
+    types: [work-item-ready-for-ai]
 
 permissions:
   contents: read
@@ -209,6 +209,7 @@ jobs:
           SUMMARY: ${{ github.event.client_payload.summary }}
           JIRA_URL: ${{ github.event.client_payload.url }}
           DESCRIPTION: ${{ github.event.client_payload.description }}
+          ISSUE_TYPE: ${{ github.event.client_payload.issue_type }}
           BRANCH: ${{ steps.meta.outputs.branch }}
         run: |
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -217,6 +218,7 @@ jobs:
           - **Key:** $ISSUE_KEY
           - **Summary:** $SUMMARY
           - **Link:** $JIRA_URL
+          - **Type:** $ISSUE_TYPE
 
           ## Description
           $DESCRIPTION
