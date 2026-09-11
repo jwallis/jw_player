@@ -137,6 +137,7 @@ class PlaybackViewModel(
         val position = player?.currentPosition ?: 0L
         if (position < RESTART_THRESHOLD_MS && index > 0) {
             player?.seekTo(index - 1, 0)
+            player?.play()
         } else {
             player?.seekTo(0)
             player?.play()
@@ -148,6 +149,7 @@ class PlaybackViewModel(
     fun next() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
         player?.seekToNextMediaItem()
+        player?.play()
     }
 
     fun beginHoldSeek() {
@@ -185,6 +187,7 @@ class PlaybackViewModel(
                 if (target >= duration) {
                     player?.volume = 1f
                     player?.seekToNextMediaItem()
+                    player?.play()
                     true
                 } else {
                     player?.seekTo(target)
