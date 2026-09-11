@@ -55,6 +55,7 @@ class PlaybackViewModel(
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
 
     private var libraryQueue: List<DocumentFile> = emptyList()
+    private var libraryIndex: Int = -1
 
     init {
         controllerFuture.addListener(
@@ -80,6 +81,7 @@ class PlaybackViewModel(
                             if (_uiState.value.mode != PlaybackMode.LIBRARY) return
                             val index = player?.currentMediaItemIndex ?: return
                             val file = libraryQueue.getOrNull(index) ?: return
+                            libraryIndex = index
                             val artist = Metadata.readArtist(getApplication(), file.uri)
                             val title = DirectoryLister.displayName(file)
                             _uiState.update {
@@ -123,8 +125,7 @@ class PlaybackViewModel(
         when (_uiState.value.mode) {
             PlaybackMode.LIBRARY -> if (player?.isPlaying == true) player?.pause() else player?.play()
             PlaybackMode.WHITE_NOISE, PlaybackMode.NONE -> {
-                val index = player?.currentMediaItemIndex ?: -1
-                if (index >= 0 && libraryQueue.isNotEmpty()) startLibraryPlayback(index)
+                if (libraryIndex >= 0) startLibraryPlayback(libraryIndex)
             }
         }
     }
@@ -233,6 +234,7 @@ class PlaybackViewModel(
     }
 
     private fun startLibraryPlayback(startIndex: Int) {
+        libraryIndex = startIndex
         player?.repeatMode = Player.REPEAT_MODE_OFF
         player?.volume = 1f
         player?.setMediaItems(libraryQueue.map { MediaItem.fromUri(it.uri) }, startIndex, C.TIME_UNSET)
