@@ -1,9 +1,13 @@
 # JW Player - User Stories
 
-Retroactive backlog covering the app's implemented functionality.
-Numbered PLAYER-001+. Grouped by epic for readability only. Frozen - Jira is
-the source of truth for stories going forward, this file isn't touched by
-automation. Each story's `Jira Issue ID` links to its real Jira ticket.
+Backlog covering the app's implemented functionality, numbered PLAYER-001+
+and grouped by epic for readability only. Jira is the source of truth for
+full ticket detail; this file exists so the AI code reviewer (ai-review.yml)
+has a standing record of user-observable behavior to check new changes
+against. The reviewer appends one entry per merged PR whose story isn't
+already represented here - human edits are still welcome, just don't expect
+the numbering or formatting to wait for you. Each story's `Jira Issue ID`
+links to its real Jira ticket.
 
 ## Epic: Library Browsing & Navigation
 

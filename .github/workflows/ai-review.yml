@@ -187,7 +187,8 @@ jobs:
             or BLOCKED, line 2 is a short one-line reason.
 
             - APPROVE: the change is correct, builds, and follows CLAUDE.md
-              conventions as-is. Make no code changes.
+              conventions as-is. Make no code changes (see the
+              docs/qa/user_stories.md step below, which can still apply).
             - FIXED: you found real, fixable code problems (bugs, convention
               violations, missing error handling for reachable cases, etc.)
               - never a rewrite of string literals/copy/wording, see above.
@@ -203,8 +204,28 @@ jobs:
               product decision, etc.). Make NO commit. Explain the problem on
               line 2.
 
-            Do not touch .github/workflows/, secrets, or files outside app/
-            and top-level Gradle config.
+            Before finishing, unless your verdict is BLOCKED: check whether
+            docs/qa/user_stories.md already has an entry whose
+            **Jira Issue ID** matches ${{ steps.jira.outputs.issue_key }}
+            (grep for it). If it does, leave the file alone. If it doesn't,
+            and the story above describes genuine user-observable behavior
+            (skip this for a pure refactor, tooling change, or technical task
+            with no observable behavior change), append one new entry to
+            whichever existing Epic section it fits best (or add a new Epic
+            section if none do), continuing the PLAYER-### numbering from the
+            highest existing ID, in the exact same format as the surrounding
+            entries (### header, **Jira Issue ID:**, an "As a user..." line,
+            **Acceptance Criteria:** bullets). Base the acceptance criteria on
+            the actual resulting behavior in this diff, not a raw copy of the
+            Jira description. Include this addition in your commit: for
+            FIXED, the same commit as your code fix; for APPROVE with
+            otherwise no code change, a new commit containing only this file,
+            message `Document ${{ steps.jira.outputs.issue_key }} in
+            user_stories.md`. Either way, do NOT push - a later workflow step
+            does that.
+
+            Do not touch .github/workflows/, secrets, or files outside app/,
+            top-level Gradle config, and docs/qa/user_stories.md.
           claude_args: |
             --model sonnet
             --allowedTools "Read,Edit,Write,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(./gradlew:*),Bash(find:*),Bash(grep:*)"
@@ -230,8 +251,8 @@ jobs:
           ./gradlew assembleDebug
           ./gradlew testDebugUnitTest
 
-      - name: Push fix commit
-        if: steps.verdict.outputs.verdict == 'FIXED'
+      - name: Push fix/doc commit
+        if: steps.verdict.outputs.verdict == 'FIXED' || steps.verdict.outputs.verdict == 'APPROVE'
         run: git push origin "HEAD:${{ steps.pr.outputs.head_ref }}"
 
       - name: Approve and merge
