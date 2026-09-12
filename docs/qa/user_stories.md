@@ -141,7 +141,7 @@ As a user, I want dedicated buttons to jump between tracks.
 
 **Acceptance Criteria:**
 - The "previous" button restarts the current track from 0:00 if more than 3 seconds have elapsed; otherwise it jumps to the previous track in the queue.
-- The "next" button advances to the next track in the queue, wrapping to the first track if currently on the last.
+- The "next" button advances to the next track in the queue; it does nothing when already on the last track (no wrap).
 
 ### PLAYER-018: Seek buttons (press-and-hold fast-forward / rewind)
 **Jira Issue ID:** JWP-21
@@ -150,7 +150,7 @@ As a user, I want press-and-hold buttons to quickly scrub forward or backward th
 **Acceptance Criteria:**
 - Holding the rewind/fast-forward button seeks continuously (accelerated) in that direction while held, muting audio during the hold.
 - Reaching the start while rewinding seeks to 0:00, restores volume, and resumes playback.
-- Reaching the end while fast-forwarding advances to the next track (wrapping if needed) and restores volume.
+- Reaching the end while fast-forwarding advances to the next track (no wrap if already on the last) and restores volume.
 - Releasing before hitting either boundary restores volume and resumes playback at the current position.
 
 ### PLAYER-019: Auto-advance to next track
@@ -160,6 +160,14 @@ As a user, I want the next track to start automatically when the current one fin
 **Acceptance Criteria:**
 - When a track finishes playing naturally (not via a skip action), the next track in the queue plays automatically.
 - If the last track in the queue finishes, playback stops.
+
+### PLAYER-026: Bluetooth headset playback control
+**Jira Issue ID:** JWP-38
+As a user, I want to play, pause, and skip tracks using my Bluetooth headset's controls.
+
+**Acceptance Criteria:**
+- Play/pause, next, and previous commands issued from a connected Bluetooth device control playback the same as the on-screen buttons.
+- Library playback is backed by a real player queue (not one track loaded at a time), so native next/previous transport commands work correctly at any point in the queue.
 
 ## Epic: White Noise
 
