@@ -15,6 +15,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.joshuawallis.jwplayer.data.DirectoryLister
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,6 +60,7 @@ class PlaybackViewModel(
 
     private var libraryQueue: List<DocumentFile> = emptyList()
     private var libraryIndex: Int = -1
+    private var libraryLoadJob: Job? = null
 
     init {
         controllerFuture.addListener(
@@ -242,31 +244,33 @@ class PlaybackViewModel(
     private fun startLibraryPlayback(startIndex: Int) {
         libraryIndex = startIndex
         val queue = libraryQueue
-        viewModelScope.launch {
-            val mediaItems =
-                withContext(Dispatchers.IO) {
-                    queue.map { file ->
-                        val title = DirectoryLister.displayName(file)
-                        val artist = Metadata.readArtist(getApplication(), file.uri)
-                        MediaItem
-                            .Builder()
-                            .setUri(file.uri)
-                            .setMediaMetadata(
-                                MediaMetadata
-                                    .Builder()
-                                    .setTitle(title)
-                                    .setArtist(artist)
-                                    .build(),
-                            ).build()
+        libraryLoadJob?.cancel()
+        libraryLoadJob =
+            viewModelScope.launch {
+                val mediaItems =
+                    withContext(Dispatchers.IO) {
+                        queue.map { file ->
+                            val title = DirectoryLister.displayName(file)
+                            val artist = Metadata.readArtist(getApplication(), file.uri)
+                            MediaItem
+                                .Builder()
+                                .setUri(file.uri)
+                                .setMediaMetadata(
+                                    MediaMetadata
+                                        .Builder()
+                                        .setTitle(title)
+                                        .setArtist(artist)
+                                        .build(),
+                                ).build()
+                        }
                     }
-                }
-            player?.repeatMode = Player.REPEAT_MODE_OFF
-            player?.volume = 1f
-            player?.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
-            player?.prepare()
-            player?.play()
-            _uiState.update { it.copy(mode = PlaybackMode.LIBRARY) }
-        }
+                player?.repeatMode = Player.REPEAT_MODE_OFF
+                player?.volume = 1f
+                player?.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
+                player?.prepare()
+                player?.play()
+                _uiState.update { it.copy(mode = PlaybackMode.LIBRARY) }
+            }
     }
 
     override fun onCleared() {
