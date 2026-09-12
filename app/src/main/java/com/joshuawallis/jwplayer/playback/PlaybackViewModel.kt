@@ -269,7 +269,16 @@ class PlaybackViewModel(
                 player?.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
                 player?.prepare()
                 player?.play()
-                _uiState.update { it.copy(mode = PlaybackMode.LIBRARY) }
+                val startMetadata = mediaItems.getOrNull(startIndex)?.mediaMetadata
+                _uiState.update {
+                    it.copy(
+                        mode = PlaybackMode.LIBRARY,
+                        currentFileUri = queue.getOrNull(startIndex)?.uri,
+                        title = startMetadata?.title?.toString() ?: "",
+                        artist = startMetadata?.artist?.toString() ?: "",
+                    )
+                }
+                refreshPosition()
             }
     }
 
