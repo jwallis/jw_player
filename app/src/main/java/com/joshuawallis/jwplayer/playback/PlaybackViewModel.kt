@@ -1,13 +1,17 @@
 package com.joshuawallis.jwplayer.playback
 
 import android.app.Application
+import android.content.ComponentName
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.MoreExecutors
 import com.joshuawallis.jwplayer.data.DirectoryLister
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +42,14 @@ private const val POSITION_TICK_MS = 200L
 class PlaybackViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
-    private val player = ExoPlayer.Builder(application).build()
+    private var player: Player? = null
+
+    private val controllerFuture =
+        MediaController
+            .Builder(
+                application,
+                SessionToken(application, ComponentName(application, PlaybackService::class.java)),
+            ).buildAsync()
 
     private val _uiState = MutableStateFlow(PlaybackUiState())
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
@@ -47,34 +58,56 @@ class PlaybackViewModel(
     private var libraryIndex: Int = -1
 
     init {
-        player.addListener(
-            object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    _uiState.update { it.copy(isPlaying = isPlaying) }
-                }
+        controllerFuture.addListener(
+            {
+                player = controllerFuture.get()
+                player?.addListener(
+                    object : Player.Listener {
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            _uiState.update { it.copy(isPlaying = isPlaying) }
+                        }
 
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED && _uiState.value.mode == PlaybackMode.LIBRARY) {
-                        advanceToNext(wrap = false)
-                    }
-                }
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_ENDED && _uiState.value.mode == PlaybackMode.LIBRARY) {
+                                _uiState.update { it.copy(mode = PlaybackMode.NONE) }
+                                refreshPosition()
+                            }
+                        }
+
+                        override fun onMediaItemTransition(
+                            mediaItem: MediaItem?,
+                            reason: Int,
+                        ) {
+                            if (_uiState.value.mode != PlaybackMode.LIBRARY) return
+                            val index = player?.currentMediaItemIndex ?: return
+                            val file = libraryQueue.getOrNull(index) ?: return
+                            libraryIndex = index
+                            val artist = Metadata.readArtist(getApplication(), file.uri)
+                            val title = DirectoryLister.displayName(file)
+                            _uiState.update {
+                                it.copy(currentFileUri = file.uri, title = title, artist = artist)
+                            }
+                            refreshPosition()
+                        }
+                    },
+                )
             },
+            MoreExecutors.directExecutor(),
         )
 
         viewModelScope.launch {
             while (true) {
                 delay(POSITION_TICK_MS)
                 if (_uiState.value.mode == PlaybackMode.LIBRARY) {
-                    val duration = player.duration.takeIf { it > 0 } ?: 0L
-                    _uiState.update { it.copy(positionMs = player.currentPosition, durationMs = duration) }
+                    refreshPosition()
                 }
             }
         }
     }
 
     private fun refreshPosition() {
-        val duration = player.duration.takeIf { it > 0 } ?: 0L
-        _uiState.update { it.copy(positionMs = player.currentPosition, durationMs = duration) }
+        val duration = player?.duration?.takeIf { it > 0 } ?: 0L
+        _uiState.update { it.copy(positionMs = player?.currentPosition ?: 0L, durationMs = duration) }
     }
 
     /** Called when a file is tapped in the Library browser. [siblings] is every playable file in that folder, sorted. */
@@ -85,14 +118,14 @@ class PlaybackViewModel(
         libraryQueue = siblings
         val index = siblings.indexOfFirst { it.uri == file.uri }
         if (index == -1) return
-        loadLibraryTrack(index)
+        startLibraryPlayback(index)
     }
 
     fun togglePlayPause() {
         when (_uiState.value.mode) {
-            PlaybackMode.LIBRARY -> if (player.isPlaying) player.pause() else player.play()
+            PlaybackMode.LIBRARY -> if (player?.isPlaying == true) player?.pause() else player?.play()
             PlaybackMode.WHITE_NOISE, PlaybackMode.NONE -> {
-                if (libraryIndex >= 0) loadLibraryTrack(libraryIndex)
+                if (libraryIndex >= 0) startLibraryPlayback(libraryIndex)
             }
         }
     }
@@ -100,25 +133,29 @@ class PlaybackViewModel(
     /** Button 3a: restart current track, or jump to the previous file if within the first 3s. */
     fun restartOrPrevious() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-        if (player.currentPosition < RESTART_THRESHOLD_MS && libraryIndex > 0) {
-            loadLibraryTrack(libraryIndex - 1)
+        val index = player?.currentMediaItemIndex ?: return
+        val position = player?.currentPosition ?: 0L
+        if (position < RESTART_THRESHOLD_MS && index > 0) {
+            player?.seekTo(index - 1, 0)
+            player?.play()
         } else {
-            player.seekTo(0)
-            player.play()
+            player?.seekTo(0)
+            player?.play()
             refreshPosition()
         }
     }
 
-    /** Button 3e: next file, wrapping to the first file if currently on the last. */
+    /** Button 3e: next file. Does not wrap when already on the last file. */
     fun next() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-        advanceToNext(wrap = true)
+        player?.seekToNextMediaItem()
+        player?.play()
     }
 
     fun beginHoldSeek() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-        player.volume = 0f
-        player.pause()
+        player?.volume = 0f
+        player?.pause()
     }
 
     /** Advances the seek position by [elapsedRealtimeMs] x 3 in [direction]. Returns true if a track boundary was hit. */
@@ -127,20 +164,20 @@ class PlaybackViewModel(
         elapsedRealtimeMs: Long,
     ): Boolean {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return true
-        val duration = player.duration.takeIf { it > 0 } ?: return false
+        val duration = player?.duration?.takeIf { it > 0 } ?: return false
         val delta = elapsedRealtimeMs * HOLD_SEEK_MULTIPLIER
-        val current = player.currentPosition
+        val current = player?.currentPosition ?: return false
         return when (direction) {
             SeekDirection.BACKWARD -> {
                 val target = current - delta
                 if (target <= 0) {
-                    player.seekTo(0)
-                    player.volume = 1f
-                    player.play()
+                    player?.seekTo(0)
+                    player?.volume = 1f
+                    player?.play()
                     refreshPosition()
                     true
                 } else {
-                    player.seekTo(target)
+                    player?.seekTo(target)
                     refreshPosition()
                     false
                 }
@@ -148,11 +185,12 @@ class PlaybackViewModel(
             SeekDirection.FORWARD -> {
                 val target = current + delta
                 if (target >= duration) {
-                    player.volume = 1f
-                    advanceToNext(wrap = true)
+                    player?.volume = 1f
+                    player?.seekToNextMediaItem()
+                    player?.play()
                     true
                 } else {
-                    player.seekTo(target)
+                    player?.seekTo(target)
                     refreshPosition()
                     false
                 }
@@ -163,79 +201,53 @@ class PlaybackViewModel(
     /** Called on release of a hold-seek gesture that did not already hit a track boundary. */
     fun endHoldSeekNormally() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-        player.volume = 1f
-        player.play()
+        player?.volume = 1f
+        player?.play()
         refreshPosition()
     }
 
     fun seekTo(positionMs: Long) {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-        player.seekTo(positionMs)
+        player?.seekTo(positionMs)
         refreshPosition()
     }
 
     fun playWhiteNoise(uri: Uri) {
-        player.repeatMode = Player.REPEAT_MODE_ONE
-        player.volume = 1f
-        player.setMediaItem(MediaItem.fromUri(uri))
-        player.prepare()
-        player.play()
+        player?.repeatMode = Player.REPEAT_MODE_ONE
+        player?.volume = 1f
+        player?.setMediaItem(MediaItem.fromUri(uri))
+        player?.prepare()
+        player?.play()
         _uiState.update { it.copy(mode = PlaybackMode.WHITE_NOISE) }
     }
 
     fun pauseWhiteNoise() {
         if (_uiState.value.mode != PlaybackMode.WHITE_NOISE) return
-        player.pause()
+        player?.pause()
         _uiState.update { it.copy(mode = PlaybackMode.NONE) }
     }
 
     fun toggleWhiteNoise(uri: Uri?) {
         if (uri == null) return
-        if (_uiState.value.mode == PlaybackMode.WHITE_NOISE && player.isPlaying) {
+        if (_uiState.value.mode == PlaybackMode.WHITE_NOISE && player?.isPlaying == true) {
             pauseWhiteNoise()
         } else {
             playWhiteNoise(uri)
         }
     }
 
-    private fun advanceToNext(wrap: Boolean) {
-        if (libraryQueue.isEmpty()) return
-        val nextIndex = libraryIndex + 1
-        when {
-            nextIndex < libraryQueue.size -> loadLibraryTrack(nextIndex)
-            wrap -> loadLibraryTrack(0)
-            else -> {
-                player.stop()
-                _uiState.update { it.copy(mode = PlaybackMode.NONE) }
-                refreshPosition()
-            }
-        }
-    }
-
-    private fun loadLibraryTrack(index: Int) {
-        val file = libraryQueue.getOrNull(index) ?: return
-        libraryIndex = index
-        player.repeatMode = Player.REPEAT_MODE_OFF
-        player.volume = 1f
-        player.setMediaItem(MediaItem.fromUri(file.uri))
-        player.prepare()
-        player.play()
-
-        val artist = Metadata.readArtist(getApplication(), file.uri)
-        val title = DirectoryLister.displayName(file)
-        _uiState.update {
-            it.copy(
-                mode = PlaybackMode.LIBRARY,
-                currentFileUri = file.uri,
-                title = title,
-                artist = artist,
-            )
-        }
-        refreshPosition()
+    private fun startLibraryPlayback(startIndex: Int) {
+        libraryIndex = startIndex
+        player?.repeatMode = Player.REPEAT_MODE_OFF
+        player?.volume = 1f
+        player?.setMediaItems(libraryQueue.map { MediaItem.fromUri(it.uri) }, startIndex, C.TIME_UNSET)
+        player?.prepare()
+        player?.play()
+        _uiState.update { it.copy(mode = PlaybackMode.LIBRARY) }
     }
 
     override fun onCleared() {
-        player.release()
+        MediaController.releaseFuture(controllerFuture)
         super.onCleared()
     }
 }
