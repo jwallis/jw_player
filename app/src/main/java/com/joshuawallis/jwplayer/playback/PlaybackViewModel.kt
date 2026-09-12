@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -240,7 +241,24 @@ class PlaybackViewModel(
         libraryIndex = startIndex
         player?.repeatMode = Player.REPEAT_MODE_OFF
         player?.volume = 1f
-        player?.setMediaItems(libraryQueue.map { MediaItem.fromUri(it.uri) }, startIndex, C.TIME_UNSET)
+        player?.setMediaItems(
+            libraryQueue.map { file ->
+                val title = DirectoryLister.displayName(file)
+                val artist = Metadata.readArtist(getApplication(), file.uri)
+                MediaItem
+                    .Builder()
+                    .setUri(file.uri)
+                    .setMediaMetadata(
+                        MediaMetadata
+                            .Builder()
+                            .setTitle(title)
+                            .setArtist(artist)
+                            .build(),
+                    ).build()
+            },
+            startIndex,
+            C.TIME_UNSET,
+        )
         player?.prepare()
         player?.play()
         _uiState.update { it.copy(mode = PlaybackMode.LIBRARY) }
