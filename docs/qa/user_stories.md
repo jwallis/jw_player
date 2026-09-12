@@ -173,6 +173,15 @@ As a user, I want to play, pause, and skip tracks using my Bluetooth headset's c
 - Play/pause, next, and previous commands issued from a connected Bluetooth device control playback the same as the on-screen buttons.
 - Library playback is backed by a real player queue (not one track loaded at a time), so native next/previous transport commands work correctly at any point in the queue.
 
+### PLAYER-027: Show track title and artist in playback notification
+**Jira Issue ID:** JWP-39
+As a user, I want the current track's title and artist to show up in the system media notification and on my Bluetooth headset/car display, so that I know what's playing without opening the app.
+
+**Acceptance Criteria:**
+- Pulling down the notification shade while a library track is playing shows the track's actual title and artist in the system media notification, not blank.
+- Skipping to another track (on-screen next/previous, or via a connected Bluetooth headset) updates the notification to the new track's title and artist.
+- A paired Bluetooth headset or car head unit with a display shows the same title/artist.
+
 ## Epic: White Noise
 
 ### PLAYER-020: Select white noise file
