@@ -44,7 +44,9 @@ import kotlinx.coroutines.delay
 import android.graphics.Color as AndroidColor
 
 class MainActivity : ComponentActivity() {
-    private var hasRequestedNotificationPermission = false
+    companion object {
+        private var hasRequestedNotificationPermission = false
+    }
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }

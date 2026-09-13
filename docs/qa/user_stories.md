@@ -182,6 +182,17 @@ As a user, I want the current track's title and artist to show up in the system 
 - Skipping to another track (on-screen next/previous, or via a connected Bluetooth headset) updates the notification to the new track's title and artist.
 - A paired Bluetooth headset or car head unit with a display shows the same title/artist.
 
+### PLAYER-028: Prompt for notification permission and clean up the playback notification lifecycle
+**Jira Issue ID:** JWP-40
+As a user on Android 13+, I want to be prompted to allow notifications so the playback notification appears with working controls, and I want it to disappear when nothing is playing, so that my notification shade doesn't show a stale player.
+
+**Acceptance Criteria:**
+- The first time playback (library or white noise) starts on Android 13+, the app requests the POST_NOTIFICATIONS runtime permission once; it is not requested at app launch, and is not requested again once granted.
+- If the permission is denied, playback and Bluetooth/media-session controls keep working normally; only the system notification is absent, with no crash and no extra app-triggered re-prompting beyond what Android itself allows.
+- If granted, the media-style notification (built entirely from Media3's defaults) is shown whenever a track is playing, its play/pause action matches the current state, and its play/pause/next/previous controls work.
+- Tapping the notification opens MainActivity.
+- Toggling white noise off, or a library track reaching the end of the queue, stops the player and clears playback mode, which removes the notification and ends the foreground service state.
+
 ## Epic: White Noise
 
 ### PLAYER-020: Select white noise file
