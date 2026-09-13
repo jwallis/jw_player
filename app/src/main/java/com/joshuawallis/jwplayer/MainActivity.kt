@@ -1,10 +1,14 @@
 package com.joshuawallis.jwplayer
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +17,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,8 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.joshuawallis.jwplayer.data.SettingsRepository
+import com.joshuawallis.jwplayer.playback.PlaybackMode
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
 import com.joshuawallis.jwplayer.ui.navigation.AppNavHost
 import com.joshuawallis.jwplayer.ui.theme.Mp3playerTheme
@@ -37,6 +44,25 @@ import kotlinx.coroutines.delay
 import android.graphics.Color as AndroidColor
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        private var hasRequestedNotificationPermission = false
+    }
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private fun requestNotificationPermissionOnce() {
+        if (hasRequestedNotificationPermission) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        hasRequestedNotificationPermission = true
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
@@ -62,6 +88,14 @@ class MainActivity : ComponentActivity() {
                         ) {
                             val playbackViewModel: PlaybackViewModel = viewModel()
                             val settingsRepository = remember { SettingsRepository(applicationContext) }
+                            val playbackUiState by playbackViewModel.uiState.collectAsState()
+
+                            LaunchedEffect(playbackUiState.mode) {
+                                if (playbackUiState.mode != PlaybackMode.NONE) {
+                                    requestNotificationPermissionOnce()
+                                }
+                            }
+
                             AppNavHost(
                                 playbackViewModel = playbackViewModel,
                                 settingsRepository = settingsRepository,

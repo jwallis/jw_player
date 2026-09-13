@@ -74,6 +74,7 @@ class PlaybackViewModel(
 
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (playbackState == Player.STATE_ENDED && _uiState.value.mode == PlaybackMode.LIBRARY) {
+                                player?.stop()
                                 _uiState.update { it.copy(mode = PlaybackMode.NONE) }
                                 refreshPosition()
                             }
@@ -228,7 +229,7 @@ class PlaybackViewModel(
 
     fun pauseWhiteNoise() {
         if (_uiState.value.mode != PlaybackMode.WHITE_NOISE) return
-        player?.pause()
+        player?.stop()
         _uiState.update { it.copy(mode = PlaybackMode.NONE) }
     }
 
