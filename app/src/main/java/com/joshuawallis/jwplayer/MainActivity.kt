@@ -17,7 +17,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,7 +35,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.joshuawallis.jwplayer.data.SettingsRepository
-import com.joshuawallis.jwplayer.playback.PlaybackMode
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
 import com.joshuawallis.jwplayer.ui.navigation.AppNavHost
 import com.joshuawallis.jwplayer.ui.theme.Mp3playerTheme
@@ -88,12 +86,9 @@ class MainActivity : ComponentActivity() {
                         ) {
                             val playbackViewModel: PlaybackViewModel = viewModel()
                             val settingsRepository = remember { SettingsRepository(applicationContext) }
-                            val playbackUiState by playbackViewModel.uiState.collectAsState()
 
-                            LaunchedEffect(playbackUiState.mode) {
-                                if (playbackUiState.mode != PlaybackMode.NONE) {
-                                    requestNotificationPermissionOnce()
-                                }
+                            LaunchedEffect(Unit) {
+                                requestNotificationPermissionOnce()
                             }
 
                             AppNavHost(
