@@ -193,6 +193,14 @@ As a user on Android 13+, I want to be prompted to allow notifications so the pl
 - Tapping the notification opens MainActivity.
 - Toggling white noise off, or a library track reaching the end of the queue, stops the player and clears playback mode, which removes the notification and ends the foreground service state.
 
+### PLAYER-029: Seek bar tap uses the currently playing track's duration
+**Jira Issue ID:** JWP-41
+As a user, I want tapping the seek bar to jump to the position I tapped, regardless of which track played first, so the seek position always matches where I tapped.
+
+**Acceptance Criteria:**
+- Tapping (or drag-releasing) the seek bar computes the seek target from the currently playing track's duration, not the duration of the first track played this session.
+- This holds after switching between tracks of different lengths within the same app session, without needing to restart the app.
+
 ## Epic: White Noise
 
 ### PLAYER-020: Select white noise file

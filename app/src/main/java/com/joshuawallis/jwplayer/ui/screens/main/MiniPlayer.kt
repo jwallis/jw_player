@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -171,6 +172,7 @@ private fun SeekBar(
 ) {
     var dragProgress by remember { mutableStateOf<Float?>(null) }
     val displayProgress = (dragProgress ?: progress).coerceIn(0f, 1f)
+    val currentOnSeek by rememberUpdatedState(onSeek)
 
     BoxWithConstraints(
         modifier =
@@ -180,7 +182,7 @@ private fun SeekBar(
                 .semantics { contentDescription = "Seek bar" }
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
-                        onSeek((offset.x / size.width.toFloat()).coerceIn(0f, 1f))
+                        currentOnSeek((offset.x / size.width.toFloat()).coerceIn(0f, 1f))
                     }
                 }.pointerInput(Unit) {
                     detectDragGestures(
@@ -191,7 +193,7 @@ private fun SeekBar(
                             dragProgress = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
                         },
                         onDragEnd = {
-                            dragProgress?.let(onSeek)
+                            dragProgress?.let(currentOnSeek)
                             dragProgress = null
                         },
                         onDragCancel = { dragProgress = null },
