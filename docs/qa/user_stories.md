@@ -94,6 +94,13 @@ As a user, I want drilling into a subfolder to feel instant most of the time.
 - While viewing a folder, the contents of each of its immediate subfolders are read in the background without blocking the UI.
 - If the user navigates again before a prefetch finishes, the in-flight prefetch for the old folder is cancelled.
 
+### PLAYER-026: Empty-library placeholder text
+**Jira Issue ID:** JWP-42
+As a user who hasn't picked a root folder yet, I want the main screen to tell me what to do next.
+
+**Acceptance Criteria:**
+- When no root folder has been selected (or no current folder is resolved), the main screen shows the placeholder text "Please choose a root folder " instead of a file list.
+
 ## Epic: Library Playback
 
 ### PLAYER-011: Play a file from the library
