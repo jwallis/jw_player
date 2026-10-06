@@ -78,6 +78,7 @@ class PlaybackViewModel(
     private var libraryLoadJob: Job? = null
     private var artistLoadJob: Job? = null
     private var artistLoadMediaId: String? = null
+    private var wasPlayingBeforeHoldSeek = false
 
     init {
         controllerFuture.addListener(
@@ -272,6 +273,7 @@ class PlaybackViewModel(
 
     fun beginHoldSeek() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
+        wasPlayingBeforeHoldSeek = player?.playWhenReady == true
         player?.volume = 0f
         player?.pause()
     }
@@ -291,7 +293,7 @@ class PlaybackViewModel(
                 if (target <= 0) {
                     player?.seekTo(0)
                     player?.volume = 1f
-                    player?.play()
+                    if (wasPlayingBeforeHoldSeek) player?.play()
                     refreshPosition()
                     true
                 } else {
@@ -305,7 +307,7 @@ class PlaybackViewModel(
                 if (target >= duration) {
                     player?.volume = 1f
                     player?.seekToNextMediaItem()
-                    player?.play()
+                    if (wasPlayingBeforeHoldSeek) player?.play()
                     true
                 } else {
                     player?.seekTo(target)
@@ -320,7 +322,7 @@ class PlaybackViewModel(
     fun endHoldSeekNormally() {
         if (_uiState.value.mode != PlaybackMode.LIBRARY) return
         player?.volume = 1f
-        player?.play()
+        if (wasPlayingBeforeHoldSeek) player?.play()
         refreshPosition()
     }
 
