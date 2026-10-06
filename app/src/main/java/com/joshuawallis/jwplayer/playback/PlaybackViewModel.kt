@@ -3,6 +3,7 @@ package com.joshuawallis.jwplayer.playback
 import android.app.Application
 import android.content.ComponentName
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -85,18 +86,21 @@ class PlaybackViewModel(
                             reason: Int,
                         ) {
                             if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-                            val index = player?.currentMediaItemIndex ?: return
-                            val file = libraryQueue.getOrNull(index) ?: return
-                            libraryIndex = index
-                            val artist = Metadata.readArtist(getApplication(), file.uri)
-                            val title = DirectoryLister.displayName(file)
+                            val uriString = MediaIds.libraryUriString(mediaItem?.mediaId) ?: return
+                            libraryIndex = player?.currentMediaItemIndex ?: return
+                            val metadata = mediaItem?.mediaMetadata
                             _uiState.update {
-                                it.copy(currentFileUri = file.uri, title = title, artist = artist)
+                                it.copy(
+                                    currentFileUri = uriString.toUri(),
+                                    title = metadata?.title?.toString().orEmpty(),
+                                    artist = metadata?.artist?.toString().orEmpty(),
+                                )
                             }
                             refreshPosition()
                         }
                     },
                 )
+                syncFromPlayer()
             },
             MoreExecutors.directExecutor(),
         )
@@ -109,6 +113,32 @@ class PlaybackViewModel(
                 }
             }
         }
+    }
+
+    /** Derives the UI state from whatever the player is already doing, e.g. when connecting to a session that is still playing. */
+    private fun syncFromPlayer() {
+        val p = player ?: return
+        val item = p.currentMediaItem ?: return
+        val mode = MediaIds.modeFor(item.mediaId, p.playbackState)
+        if (mode == PlaybackMode.NONE) return
+        val uriString = MediaIds.libraryUriString(item.mediaId)
+        if (uriString != null) libraryIndex = p.currentMediaItemIndex
+        _uiState.update {
+            it.copy(
+                mode = mode,
+                isPlaying = p.isPlaying,
+                currentFileUri = uriString?.toUri(),
+                title =
+                    item.mediaMetadata.title
+                        ?.toString()
+                        .orEmpty(),
+                artist =
+                    item.mediaMetadata.artist
+                        ?.toString()
+                        .orEmpty(),
+            )
+        }
+        refreshPosition()
     }
 
     private fun refreshPosition() {
@@ -221,7 +251,13 @@ class PlaybackViewModel(
     fun playWhiteNoise(uri: Uri) {
         player?.repeatMode = Player.REPEAT_MODE_ONE
         player?.volume = 1f
-        player?.setMediaItem(MediaItem.fromUri(uri))
+        player?.setMediaItem(
+            MediaItem
+                .Builder()
+                .setMediaId(MediaIds.WHITE_NOISE)
+                .setUri(uri)
+                .build(),
+        )
         player?.prepare()
         player?.play()
         _uiState.update { it.copy(mode = PlaybackMode.WHITE_NOISE) }
@@ -255,6 +291,7 @@ class PlaybackViewModel(
                             val artist = Metadata.readArtist(getApplication(), file.uri)
                             MediaItem
                                 .Builder()
+                                .setMediaId(MediaIds.forLibraryFile(file.uri.toString()))
                                 .setUri(file.uri)
                                 .setMediaMetadata(
                                     MediaMetadata

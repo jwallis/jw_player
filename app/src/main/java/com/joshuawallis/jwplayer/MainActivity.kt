@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Mp3playerTheme {
                 Box(modifier = Modifier.semantics { testTagsAsResourceId = true }) {
-                    var showSplash by remember { mutableStateOf(true) }
+                    var showSplash by rememberSaveable { mutableStateOf(true) }
 
                     LaunchedEffect(Unit) {
                         delay(1500)

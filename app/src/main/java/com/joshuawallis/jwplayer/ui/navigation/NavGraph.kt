@@ -5,6 +5,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.documentfile.provider.DocumentFile
@@ -48,7 +50,22 @@ fun AppNavHost(
                 }
             }
         }
-    var currentFolderDoc by remember(rootFolderDoc) { mutableStateOf(rootFolderDoc) }
+    // Saved as the chain of folder URIs from the root, since a DocumentFile rebuilt
+    // from a bare URI has no parentFile; restoring re-walks the chain from the root.
+    val currentFolderSaver =
+        Saver<DocumentFile?, ArrayList<String>>(
+            save = { folder ->
+                folder?.let { ArrayList(FolderChain.idsFromRoot(it, { doc -> doc.uri.toString() }, { doc -> doc.parentFile })) }
+            },
+            restore = { ids ->
+                rootFolderDoc?.let { root ->
+                    FolderChain.resolve(root, ids, { doc -> doc.uri.toString() }, { doc -> doc.listFiles().asList() })
+                }
+            },
+        )
+    var currentFolderDoc by rememberSaveable(rootFolderUri, stateSaver = currentFolderSaver) {
+        mutableStateOf(rootFolderDoc)
+    }
 
     NavHost(navController = navController, startDestination = Route.MAIN) {
         composable(Route.MAIN) {
