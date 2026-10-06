@@ -39,6 +39,19 @@ data class PlaybackUiState(
     val durationMs: Long = 0L,
 )
 
+private const val WHITE_NOISE_TITLE = "White Noise"
+
+/** White noise has no track identity or meaningful position: show its name, an empty seek bar, and no highlighted library row. */
+private fun PlaybackUiState.showingWhiteNoise(): PlaybackUiState =
+    copy(
+        mode = PlaybackMode.WHITE_NOISE,
+        title = WHITE_NOISE_TITLE,
+        artist = "",
+        currentFileUri = null,
+        positionMs = 0L,
+        durationMs = 0L,
+    )
+
 private const val HOLD_SEEK_TICK_MS = 30L
 private const val HOLD_SEEK_MULTIPLIER = 10
 private const val RESTART_THRESHOLD_MS = 3_000L
@@ -118,6 +131,10 @@ class PlaybackViewModel(
         val item = p.currentMediaItem
         val mode = MediaIds.modeFor(item?.mediaId, p.playbackState)
         _uiState.update { it.copy(mode = mode, isPlaying = p.isPlaying) }
+        if (mode == PlaybackMode.WHITE_NOISE) {
+            _uiState.update { it.showingWhiteNoise() }
+            return
+        }
         val uriString = MediaIds.libraryUriString(item?.mediaId)
         if (mode != PlaybackMode.LIBRARY || item == null || uriString == null) return
         libraryIndex = p.currentMediaItemIndex
@@ -208,8 +225,8 @@ class PlaybackViewModel(
 
     fun togglePlayPause() {
         when (_uiState.value.mode) {
-            PlaybackMode.LIBRARY -> if (player?.isPlaying == true) player?.pause() else player?.play()
-            PlaybackMode.WHITE_NOISE, PlaybackMode.NONE -> {
+            PlaybackMode.LIBRARY, PlaybackMode.WHITE_NOISE -> if (player?.isPlaying == true) player?.pause() else player?.play()
+            PlaybackMode.NONE -> {
                 if (libraryIndex in libraryQueue.indices) startLibraryPlayback(libraryQueue, libraryIndex)
             }
         }
@@ -309,7 +326,7 @@ class PlaybackViewModel(
         )
         player?.prepare()
         player?.play()
-        _uiState.update { it.copy(mode = PlaybackMode.WHITE_NOISE) }
+        _uiState.update { it.showingWhiteNoise() }
     }
 
     fun pauseWhiteNoise() {
