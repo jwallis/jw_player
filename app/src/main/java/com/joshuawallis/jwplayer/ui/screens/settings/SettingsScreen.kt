@@ -60,6 +60,7 @@ fun SettingsScreen(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
             if (uri != null) {
+                releaseReplacedGrant(context, oldUri = rootFolderUri, newUri = uri)
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 onRootFolderChosen(uri)
             }
@@ -70,6 +71,7 @@ fun SettingsScreen(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri ->
             if (uri != null) {
+                releaseReplacedGrant(context, oldUri = whiteNoiseUri, newUri = uri)
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 onWhiteNoiseChosen(uri)
             }
@@ -162,6 +164,22 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+/**
+ * Releases the persisted read grant on the URI being replaced, so re-picking doesn't pile up grants. Only releases a
+ * grant the app actually holds (release throws otherwise, e.g. for the debug-only file:// root) and never the one
+ * being re-picked.
+ */
+private fun releaseReplacedGrant(
+    context: Context,
+    oldUri: Uri?,
+    newUri: Uri,
+) {
+    if (oldUri == null || oldUri == newUri) return
+    val resolver = context.contentResolver
+    if (resolver.persistedUriPermissions.none { it.uri == oldUri }) return
+    resolver.releasePersistableUriPermission(oldUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
 }
 
 private fun treeDocumentName(
