@@ -19,7 +19,6 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.joshuawallis.jwplayer.data.DirectoryLister
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,7 +56,7 @@ private fun PlaybackUiState.showingWhiteNoise(): PlaybackUiState =
 private const val HOLD_SEEK_TICK_MS = 30L
 private const val HOLD_SEEK_MULTIPLIER = 10
 private const val RESTART_THRESHOLD_MS = 3_000L
-private const val POSITION_TICK_MS = 200L
+internal const val POSITION_TICK_MS = 1_000L
 
 class PlaybackViewModel(
     application: Application,
@@ -117,15 +116,6 @@ class PlaybackViewModel(
             },
             MoreExecutors.directExecutor(),
         )
-
-        viewModelScope.launch {
-            while (true) {
-                delay(POSITION_TICK_MS)
-                if (_uiState.value.mode == PlaybackMode.LIBRARY) {
-                    refreshPosition()
-                }
-            }
-        }
     }
 
     /**
@@ -234,7 +224,7 @@ class PlaybackViewModel(
         Toast.makeText(getApplication(), message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun refreshPosition() {
+    fun refreshPosition() {
         val duration = player?.duration?.takeIf { it > 0 } ?: 0L
         _uiState.update { it.copy(positionMs = player?.currentPosition ?: 0L, durationMs = duration) }
     }

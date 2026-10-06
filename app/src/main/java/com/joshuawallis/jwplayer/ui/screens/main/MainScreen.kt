@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -21,7 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.joshuawallis.jwplayer.playback.POSITION_TICK_MS
+import com.joshuawallis.jwplayer.playback.PlaybackMode
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun MainScreen(
@@ -34,6 +41,20 @@ fun MainScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by playbackViewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Ticks the elapsed time only while a library track is playing and this screen is visible.
+    LaunchedEffect(lifecycleOwner, uiState.mode, uiState.isPlaying) {
+        if (uiState.mode != PlaybackMode.LIBRARY) return@LaunchedEffect
+        val isPlaying = uiState.isPlaying
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            playbackViewModel.refreshPosition()
+            while (isPlaying) {
+                delay(POSITION_TICK_MS)
+                playbackViewModel.refreshPosition()
+            }
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize().safeDrawingPadding()) {
         Spacer(modifier = Modifier.fillMaxWidth().height(8.dp))
