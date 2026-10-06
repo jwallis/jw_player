@@ -54,7 +54,7 @@ fun LibraryBrowser(
     }
 
     // A deleted root folder, or one whose permission was revoked, would otherwise just list as empty.
-    val rootAvailable = remember(rootFolderDoc, currentFolderDoc) { rootFolderDoc.exists() && rootFolderDoc.canRead() }
+    val rootAvailable = remember(rootFolderDoc) { rootFolderDoc.exists() && rootFolderDoc.canRead() }
     if (!rootAvailable) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
