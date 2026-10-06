@@ -3,6 +3,7 @@ package com.joshuawallis.jwplayer.playback
 import android.app.Application
 import android.content.ComponentName
 import android.net.Uri
+import android.widget.Toast
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
@@ -10,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -104,6 +106,10 @@ class PlaybackViewModel(
                             reason: Int,
                         ) {
                             syncFromPlayer()
+                        }
+
+                        override fun onPlayerError(error: PlaybackException) {
+                            recoverFromPlayerError()
                         }
                     },
                 )
@@ -207,6 +213,26 @@ class PlaybackViewModel(
                     .setArtist(artist)
                     .build(),
             ).build()
+
+    /**
+     * An errored player sits idle and ignores play(). For a library track, skip to the next one (re-preparing the
+     * player); with no next track, or for white noise, stop and clear the mini-player. Either way, tell the user.
+     */
+    private fun recoverFromPlayerError() {
+        val p = player ?: return
+        val failedTitle = _uiState.value.title
+        val isLibraryItem = MediaIds.libraryUriString(p.currentMediaItem?.mediaId) != null
+        if (isLibraryItem && p.hasNextMediaItem()) {
+            p.seekToNextMediaItem()
+            p.prepare()
+            p.play()
+        } else {
+            p.stop()
+            _uiState.value = PlaybackUiState()
+        }
+        val message = if (failedTitle.isNotBlank()) "Couldn't play $failedTitle" else "Couldn't play this file"
+        Toast.makeText(getApplication(), message, Toast.LENGTH_SHORT).show()
+    }
 
     private fun refreshPosition() {
         val duration = player?.duration?.takeIf { it > 0 } ?: 0L
