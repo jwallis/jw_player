@@ -62,6 +62,8 @@ class PlaybackViewModel(
     private var libraryQueue: List<DocumentFile> = emptyList()
     private var libraryIndex: Int = -1
     private var libraryLoadJob: Job? = null
+    private var artistLoadJob: Job? = null
+    private var artistLoadMediaId: String? = null
 
     init {
         controllerFuture.addListener(
@@ -133,7 +135,61 @@ class PlaybackViewModel(
             )
         }
         refreshPosition()
+        loadArtistIfMissing(item, uriString.toUri())
     }
+
+    /**
+     * Library items start playing with a title only, so playback never waits on reading tags. Once an item becomes
+     * current, this reads its artist in the background and swaps in a copy of the item carrying it, so the
+     * mini-player, notification and Bluetooth display all pick it up. The swapped item has the same URI, so the
+     * player updates it in place without interrupting playback.
+     */
+    private fun loadArtistIfMissing(
+        item: MediaItem,
+        uri: Uri,
+    ) {
+        if (item.mediaMetadata.artist != null || artistLoadMediaId == item.mediaId) return
+        artistLoadMediaId = item.mediaId
+        artistLoadJob?.cancel()
+        artistLoadJob =
+            viewModelScope.launch {
+                try {
+                    val artist = withContext(Dispatchers.IO) { Metadata.readArtist(getApplication(), uri) }
+                    val p = player ?: return@launch
+                    if (p.currentMediaItem?.mediaId != item.mediaId) return@launch
+                    _uiState.update { if (it.currentFileUri == uri) it.copy(artist = artist) else it }
+                    p.replaceMediaItem(
+                        p.currentMediaItemIndex,
+                        libraryMediaItem(
+                            uri,
+                            item.mediaMetadata.title
+                                ?.toString()
+                                .orEmpty(),
+                            artist,
+                        ),
+                    )
+                } finally {
+                    if (artistLoadMediaId == item.mediaId) artistLoadMediaId = null
+                }
+            }
+    }
+
+    private fun libraryMediaItem(
+        uri: Uri,
+        title: String,
+        artist: String?,
+    ): MediaItem =
+        MediaItem
+            .Builder()
+            .setMediaId(MediaIds.forLibraryFile(uri.toString()))
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata
+                    .Builder()
+                    .setTitle(title)
+                    .setArtist(artist)
+                    .build(),
+            ).build()
 
     private fun refreshPosition() {
         val duration = player?.duration?.takeIf { it > 0 } ?: 0L
@@ -145,17 +201,16 @@ class PlaybackViewModel(
         file: DocumentFile,
         siblings: List<DocumentFile>,
     ) {
-        libraryQueue = siblings
         val index = siblings.indexOfFirst { it.uri == file.uri }
         if (index == -1) return
-        startLibraryPlayback(index)
+        startLibraryPlayback(siblings, index)
     }
 
     fun togglePlayPause() {
         when (_uiState.value.mode) {
             PlaybackMode.LIBRARY -> if (player?.isPlaying == true) player?.pause() else player?.play()
             PlaybackMode.WHITE_NOISE, PlaybackMode.NONE -> {
-                if (libraryIndex >= 0) startLibraryPlayback(libraryIndex)
+                if (libraryIndex in libraryQueue.indices) startLibraryPlayback(libraryQueue, libraryIndex)
             }
         }
     }
@@ -272,30 +327,20 @@ class PlaybackViewModel(
         }
     }
 
-    private fun startLibraryPlayback(startIndex: Int) {
-        libraryIndex = startIndex
-        val queue = libraryQueue
+    private fun startLibraryPlayback(
+        queue: List<DocumentFile>,
+        startIndex: Int,
+    ) {
         libraryLoadJob?.cancel()
         libraryLoadJob =
             viewModelScope.launch {
+                // Display names only (artist is read lazily once a track becomes current), so playback starts at once.
                 val mediaItems =
                     withContext(Dispatchers.IO) {
-                        queue.map { file ->
-                            val title = DirectoryLister.displayName(file)
-                            val artist = Metadata.readArtist(getApplication(), file.uri)
-                            MediaItem
-                                .Builder()
-                                .setMediaId(MediaIds.forLibraryFile(file.uri.toString()))
-                                .setUri(file.uri)
-                                .setMediaMetadata(
-                                    MediaMetadata
-                                        .Builder()
-                                        .setTitle(title)
-                                        .setArtist(artist)
-                                        .build(),
-                                ).build()
-                        }
+                        queue.map { file -> libraryMediaItem(file.uri, DirectoryLister.displayName(file), artist = null) }
                     }
+                libraryQueue = queue
+                libraryIndex = startIndex
                 player?.repeatMode = Player.REPEAT_MODE_OFF
                 player?.volume = 1f
                 player?.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
