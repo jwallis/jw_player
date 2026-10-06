@@ -70,14 +70,17 @@ class PlaybackViewModel(
                 player?.addListener(
                     object : Player.Listener {
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
-                            _uiState.update { it.copy(isPlaying = isPlaying) }
+                            syncFromPlayer()
                         }
 
                         override fun onPlaybackStateChanged(playbackState: Int) {
-                            if (playbackState == Player.STATE_ENDED && _uiState.value.mode == PlaybackMode.LIBRARY) {
+                            val isLibraryItem = MediaIds.libraryUriString(player?.currentMediaItem?.mediaId) != null
+                            if (playbackState == Player.STATE_ENDED && isLibraryItem) {
                                 player?.stop()
                                 _uiState.update { it.copy(mode = PlaybackMode.NONE) }
                                 refreshPosition()
+                            } else {
+                                syncFromPlayer()
                             }
                         }
 
@@ -85,18 +88,7 @@ class PlaybackViewModel(
                             mediaItem: MediaItem?,
                             reason: Int,
                         ) {
-                            if (_uiState.value.mode != PlaybackMode.LIBRARY) return
-                            val uriString = MediaIds.libraryUriString(mediaItem?.mediaId) ?: return
-                            libraryIndex = player?.currentMediaItemIndex ?: return
-                            val metadata = mediaItem?.mediaMetadata
-                            _uiState.update {
-                                it.copy(
-                                    currentFileUri = uriString.toUri(),
-                                    title = metadata?.title?.toString().orEmpty(),
-                                    artist = metadata?.artist?.toString().orEmpty(),
-                                )
-                            }
-                            refreshPosition()
+                            syncFromPlayer()
                         }
                     },
                 )
@@ -115,19 +107,21 @@ class PlaybackViewModel(
         }
     }
 
-    /** Derives the UI state from whatever the player is already doing, e.g. when connecting to a session that is still playing. */
+    /**
+     * Derives mode and the current track from whatever the player is actually doing. Runs on connect and on every
+     * isPlaying/state/item change, so playback started outside the app (headset, notification) is reflected too.
+     */
     private fun syncFromPlayer() {
         val p = player ?: return
-        val item = p.currentMediaItem ?: return
-        val mode = MediaIds.modeFor(item.mediaId, p.playbackState)
-        if (mode == PlaybackMode.NONE) return
-        val uriString = MediaIds.libraryUriString(item.mediaId)
-        if (uriString != null) libraryIndex = p.currentMediaItemIndex
+        val item = p.currentMediaItem
+        val mode = MediaIds.modeFor(item?.mediaId, p.playbackState)
+        _uiState.update { it.copy(mode = mode, isPlaying = p.isPlaying) }
+        val uriString = MediaIds.libraryUriString(item?.mediaId)
+        if (mode != PlaybackMode.LIBRARY || item == null || uriString == null) return
+        libraryIndex = p.currentMediaItemIndex
         _uiState.update {
             it.copy(
-                mode = mode,
-                isPlaying = p.isPlaying,
-                currentFileUri = uriString?.toUri(),
+                currentFileUri = uriString.toUri(),
                 title =
                     item.mediaMetadata.title
                         ?.toString()

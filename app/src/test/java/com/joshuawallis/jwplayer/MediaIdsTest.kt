@@ -37,6 +37,19 @@ class MediaIdsTest {
     }
 
     @Test
+    fun `headset play on a stopped library item moves mode from NONE to LIBRARY`() {
+        val id = MediaIds.forLibraryFile(uri)
+        assertEquals(PlaybackMode.NONE, MediaIds.modeFor(id, Player.STATE_IDLE))
+        assertEquals(PlaybackMode.LIBRARY, MediaIds.modeFor(id, Player.STATE_BUFFERING))
+        assertEquals(PlaybackMode.LIBRARY, MediaIds.modeFor(id, Player.STATE_READY))
+    }
+
+    @Test
+    fun `ended library item is NONE mode`() {
+        assertEquals(PlaybackMode.NONE, MediaIds.modeFor(MediaIds.forLibraryFile(uri), Player.STATE_ENDED))
+    }
+
+    @Test
     fun `untagged item is NONE mode`() {
         assertEquals(PlaybackMode.NONE, MediaIds.modeFor("", Player.STATE_READY))
         assertEquals(PlaybackMode.NONE, MediaIds.modeFor(null, Player.STATE_READY))
