@@ -8,8 +8,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -50,18 +53,40 @@ fun LibraryBrowser(
         return
     }
 
-    val listingCache = remember { ConcurrentHashMap<Uri, DirectoryListing>() }
-    val listing =
-        remember(currentFolderDoc) {
-            listingCache.getOrPut(currentFolderDoc.uri) {
-                DirectoryLister.list(currentFolderDoc, AUDIO_EXTENSIONS)
-            }
+    // A deleted root folder, or one whose permission was revoked, would otherwise just list as empty.
+    val rootAvailable = remember(rootFolderDoc, currentFolderDoc) { rootFolderDoc.exists() && rootFolderDoc.canRead() }
+    if (!rootAvailable) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                "Your root folder is unavailable. Choose it again in Settings.",
+                modifier = Modifier.testTag("root_unavailable_message"),
+            )
         }
+        return
+    }
+
+    val listingCache = remember { ConcurrentHashMap<Uri, DirectoryListing>() }
+    val cachedListing = remember(currentFolderDoc) { listingCache[currentFolderDoc.uri] }
+    var listing by remember(currentFolderDoc) {
+        mutableStateOf(
+            cachedListing ?: DirectoryLister.list(currentFolderDoc, AUDIO_EXTENSIONS).also {
+                listingCache[currentFolderDoc.uri] = it
+            },
+        )
+    }
     val parent = remember(currentFolderDoc) { currentFolderDoc.parentFile }
 
-    // Prefetch one level ahead: while browsing this folder, read the contents of each of
-    // its subfolders in the background, so drilling into any of them is instant.
     LaunchedEffect(currentFolderDoc) {
+        // A cached listing may be stale (files added, removed or renamed since it was read):
+        // it's shown immediately, then replaced with a fresh listing read in the background.
+        if (cachedListing != null) {
+            val freshListing = withContext(Dispatchers.IO) { DirectoryLister.list(currentFolderDoc, AUDIO_EXTENSIONS) }
+            listingCache[currentFolderDoc.uri] = freshListing
+            listing = freshListing
+        }
+
+        // Prefetch one level ahead: while browsing this folder, read the contents of each of
+        // its subfolders in the background, so drilling into any of them is instant.
         withContext(Dispatchers.IO) {
             listing.folders
                 .map { subfolder ->
