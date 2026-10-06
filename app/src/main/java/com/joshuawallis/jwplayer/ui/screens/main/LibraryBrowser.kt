@@ -3,9 +3,12 @@ package com.joshuawallis.jwplayer.ui.screens.main
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +24,12 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
+/** Where a folder's list was scrolled to when the user last left it. */
+data class FolderScrollPosition(
+    val index: Int,
+    val offset: Int,
+)
+
 @Composable
 fun LibraryBrowser(
     rootFolderDoc: DocumentFile?,
@@ -28,6 +37,7 @@ fun LibraryBrowser(
     onFolderChange: (DocumentFile) -> Unit,
     highlightedUri: Uri?,
     onFilePlay: (DocumentFile, List<DocumentFile>) -> Unit,
+    scrollPositions: MutableMap<Uri, FolderScrollPosition>,
     modifier: Modifier = Modifier,
 ) {
     if (rootFolderDoc == null || currentFolderDoc == null) {
@@ -64,14 +74,29 @@ fun LibraryBrowser(
         }
     }
 
-    FolderListView(
-        listing = listing,
-        showBack = currentFolderDoc.uri != rootFolderDoc.uri,
-        backLabel = currentFolderDoc.name.orEmpty(),
-        onBackClick = { parent?.let(onFolderChange) },
-        onFolderClick = onFolderChange,
-        onFileClick = { file -> onFilePlay(file, listing.files) },
-        highlightedUri = highlightedUri,
-        modifier = modifier.fillMaxSize(),
-    )
+    // Each folder gets its own list state, starting where the user last left that folder
+    // during this app session (or at the top on its first visit).
+    key(currentFolderDoc.uri) {
+        val folderUri = currentFolderDoc.uri
+        val saved = scrollPositions[folderUri]
+        val listState = rememberLazyListState(saved?.index ?: 0, saved?.offset ?: 0)
+        DisposableEffect(folderUri) {
+            onDispose {
+                scrollPositions[folderUri] =
+                    FolderScrollPosition(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset)
+            }
+        }
+
+        FolderListView(
+            listing = listing,
+            showBack = currentFolderDoc.uri != rootFolderDoc.uri,
+            backLabel = currentFolderDoc.name.orEmpty(),
+            onBackClick = { parent?.let(onFolderChange) },
+            onFolderClick = onFolderChange,
+            onFileClick = { file -> onFilePlay(file, listing.files) },
+            highlightedUri = highlightedUri,
+            listState = listState,
+            modifier = modifier.fillMaxSize(),
+        )
+    }
 }

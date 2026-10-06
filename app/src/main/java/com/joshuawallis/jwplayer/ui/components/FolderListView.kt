@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -48,9 +49,8 @@ fun FolderListView(
     onFileClick: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier,
     highlightedUri: Uri? = null,
+    listState: LazyListState = rememberLazyListState(),
 ) {
-    val listState = rememberLazyListState()
-
     Column(modifier = modifier) {
         if (showBack) {
             Row(

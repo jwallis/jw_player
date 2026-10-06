@@ -22,6 +22,7 @@ class LibraryBrowserTest {
                 onFolderChange = {},
                 highlightedUri = null,
                 onFilePlay = { _, _ -> },
+                scrollPositions = mutableMapOf(),
             )
         }
 

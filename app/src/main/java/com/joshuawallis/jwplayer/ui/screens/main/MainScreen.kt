@@ -1,5 +1,6 @@
 package com.joshuawallis.jwplayer.ui.screens.main
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ fun MainScreen(
     rootFolderDoc: DocumentFile?,
     currentFolderDoc: DocumentFile?,
     onFolderChange: (DocumentFile) -> Unit,
+    folderScrollPositions: MutableMap<Uri, FolderScrollPosition>,
     playbackViewModel: PlaybackViewModel,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -42,6 +44,7 @@ fun MainScreen(
                 onFolderChange = onFolderChange,
                 highlightedUri = uiState.currentFileUri,
                 onFilePlay = { file, siblings -> playbackViewModel.playLibraryFile(file, siblings) },
+                scrollPositions = folderScrollPositions,
                 modifier = Modifier.fillMaxSize(),
             )
             IconButton(

@@ -1,5 +1,6 @@
 package com.joshuawallis.jwplayer.ui.navigation
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.joshuawallis.jwplayer.data.SettingsRepository
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
+import com.joshuawallis.jwplayer.ui.screens.main.FolderScrollPosition
 import com.joshuawallis.jwplayer.ui.screens.main.MainScreen
 import com.joshuawallis.jwplayer.ui.screens.settings.SettingsScreen
 import java.io.File
@@ -67,6 +69,10 @@ fun AppNavHost(
         mutableStateOf(rootFolderDoc)
     }
 
+    // Plain in-memory map, deliberately not saved: every folder opens at the top on its
+    // first visit in a fresh app session.
+    val folderScrollPositions = remember { HashMap<Uri, FolderScrollPosition>() }
+
     NavHost(navController = navController, startDestination = Route.MAIN) {
         composable(Route.MAIN) {
             BackHandler(enabled = currentFolderDoc?.uri != rootFolderDoc?.uri) {
@@ -76,6 +82,7 @@ fun AppNavHost(
                 rootFolderDoc = rootFolderDoc,
                 currentFolderDoc = currentFolderDoc,
                 onFolderChange = { currentFolderDoc = it },
+                folderScrollPositions = folderScrollPositions,
                 playbackViewModel = playbackViewModel,
                 onSettingsClick = { navController.navigate(Route.SETTINGS) },
             )
