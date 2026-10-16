@@ -163,7 +163,7 @@ fun SettingsScreen(
                 }
 
                 Button(
-                    onClick = { playbackViewModel.toggleWhiteNoise(whiteNoiseUri) },
+                    onClick = { playbackViewModel.toggleWhiteNoise(whiteNoiseUri, soundName.orEmpty()) },
                     modifier = Modifier.testTag(if (whiteNoisePlaying) "white_noise_pause_button" else "white_noise_play_button"),
                     colors =
                         if (whiteNoisePlaying) {

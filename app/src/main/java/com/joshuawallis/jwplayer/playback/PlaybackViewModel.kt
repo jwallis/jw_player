@@ -40,13 +40,11 @@ data class PlaybackUiState(
     val durationMs: Long = 0L,
 )
 
-private const val WHITE_NOISE_TITLE = "White Noise"
-
-/** White noise has no track identity or meaningful position: show its name, an empty seek bar, and no highlighted library row. */
-private fun PlaybackUiState.showingWhiteNoise(): PlaybackUiState =
+/** A soundscape has no track identity or meaningful position: show its name, an empty seek bar, and no highlighted library row. */
+private fun PlaybackUiState.showingWhiteNoise(soundName: String): PlaybackUiState =
     copy(
         mode = PlaybackMode.WHITE_NOISE,
-        title = WHITE_NOISE_TITLE,
+        title = "Soundscape: $soundName",
         artist = "",
         currentFileUri = null,
         positionMs = 0L,
@@ -129,7 +127,13 @@ class PlaybackViewModel(
         val mode = MediaIds.modeFor(item?.mediaId, p.playbackState)
         _uiState.update { it.copy(mode = mode, isPlaying = p.isPlaying) }
         if (mode == PlaybackMode.WHITE_NOISE) {
-            _uiState.update { it.showingWhiteNoise() }
+            val soundName =
+                item
+                    ?.mediaMetadata
+                    ?.title
+                    ?.toString()
+                    .orEmpty()
+            _uiState.update { it.showingWhiteNoise(soundName) }
             return
         }
         val uriString = MediaIds.libraryUriString(item?.mediaId)
@@ -332,7 +336,10 @@ class PlaybackViewModel(
         refreshPosition()
     }
 
-    fun playWhiteNoise(uri: Uri) {
+    fun playWhiteNoise(
+        uri: Uri,
+        soundName: String,
+    ) {
         player?.repeatMode = Player.REPEAT_MODE_ONE
         player?.volume = 1f
         player?.setMediaItem(
@@ -340,11 +347,12 @@ class PlaybackViewModel(
                 .Builder()
                 .setMediaId(MediaIds.WHITE_NOISE)
                 .setUri(uri)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(soundName).build())
                 .build(),
         )
         player?.prepare()
         player?.play()
-        _uiState.update { it.showingWhiteNoise() }
+        _uiState.update { it.showingWhiteNoise(soundName) }
     }
 
     fun pauseWhiteNoise() {
@@ -353,12 +361,15 @@ class PlaybackViewModel(
         _uiState.update { it.copy(mode = PlaybackMode.NONE) }
     }
 
-    fun toggleWhiteNoise(uri: Uri?) {
+    fun toggleWhiteNoise(
+        uri: Uri?,
+        soundName: String,
+    ) {
         if (uri == null) return
         if (_uiState.value.mode == PlaybackMode.WHITE_NOISE && player?.isPlaying == true) {
             pauseWhiteNoise()
         } else {
-            playWhiteNoise(uri)
+            playWhiteNoise(uri, soundName)
         }
     }
 
