@@ -18,16 +18,24 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -36,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
+import com.joshuawallis.jwplayer.data.BundledSounds
 import com.joshuawallis.jwplayer.playback.PlaybackMode
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
 import java.io.File
@@ -97,28 +106,60 @@ fun SettingsScreen(
                     .padding(innerPadding)
                     .padding(16.dp),
         ) {
-            Text("White Noise", style = MaterialTheme.typography.titleLarge)
+            Text("Soundscapes", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val whiteNoiseFileName = whiteNoiseUri?.let { singleDocumentName(context, it) }
-                Button(
-                    onClick = { filePickerLauncher.launch(arrayOf("audio/*")) },
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .semantics {
-                                contentDescription = whiteNoiseFileName?.let { "file $it" } ?: "Select white noise file"
-                            },
+                val bundledSounds = remember { BundledSounds.list(context) }
+                val selectedBundledSound = bundledSounds.firstOrNull { it.uri == whiteNoiseUri }
+                val soundName =
+                    selectedBundledSound?.displayName
+                        ?: whiteNoiseUri?.let { singleDocumentName(context, it) }
+                var soundMenuExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = soundMenuExpanded,
+                    onExpandedChange = { soundMenuExpanded = it },
+                    modifier = Modifier.weight(1f),
                 ) {
-                    Text(
-                        text = whiteNoiseFileName ?: "Select File",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.testTag("white_noise_file_button"),
+                    OutlinedTextField(
+                        value = soundName ?: "Select Sound",
+                        onValueChange = {},
+                        readOnly = true,
+                        singleLine = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = soundMenuExpanded) },
+                        modifier =
+                            Modifier
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                                .fillMaxWidth()
+                                .testTag("white_noise_file_button")
+                                .semantics {
+                                    contentDescription = soundName?.let { "sound $it" } ?: "Select soundscape"
+                                },
                     )
+                    ExposedDropdownMenu(
+                        expanded = soundMenuExpanded,
+                        onDismissRequest = { soundMenuExpanded = false },
+                    ) {
+                        bundledSounds.forEach { sound ->
+                            DropdownMenuItem(
+                                text = { Text(sound.displayName) },
+                                onClick = {
+                                    soundMenuExpanded = false
+                                    releaseReplacedGrant(context, oldUri = whiteNoiseUri, newUri = sound.uri)
+                                    onWhiteNoiseChosen(sound.uri)
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("<choose my own>") },
+                            onClick = {
+                                soundMenuExpanded = false
+                                filePickerLauncher.launch(arrayOf("audio/*"))
+                            },
+                        )
+                    }
                 }
 
                 Button(
@@ -136,7 +177,7 @@ fun SettingsScreen(
                 ) {
                     Icon(
                         imageVector = if (whiteNoisePlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (whiteNoisePlaying) "Pause white noise" else "Play white noise",
+                        contentDescription = if (whiteNoisePlaying) "Pause soundscape" else "Play soundscape",
                     )
                 }
             }
