@@ -40,6 +40,25 @@ data class PlaybackUiState(
     val durationMs: Long = 0L,
 )
 
+/** What [PlaybackViewModel.addToQueue] did, for one-shot UI feedback. */
+sealed class QueueResult {
+    data class Added(
+        val count: Int,
+    ) : QueueResult()
+
+    data object QueueFull : QueueResult()
+
+    data object StartedPlaying : QueueResult()
+}
+
+const val MAX_QUEUE_SIZE = 10
+
+/** True when the player moved from [oldIndex] to the very next timeline slot, as natural advance and Next both do. */
+internal fun isForwardStep(
+    oldIndex: Int,
+    newIndex: Int,
+): Boolean = newIndex == oldIndex + 1
+
 private const val WHITE_NOISE_TITLE = "White Noise"
 
 /** White noise has no track identity or meaningful position: show its name, an empty seek bar, and no highlighted library row. */
@@ -76,6 +95,10 @@ class PlaybackViewModel(
     private var libraryQueue: List<DocumentFile> = emptyList()
     private var libraryIndex: Int = -1
     private var libraryLoadJob: Job? = null
+
+    /** Songs queued by long-press that are still pending, in order, spliced into the timeline right after the current item. */
+    private val queuedFiles = mutableListOf<DocumentFile>()
+    private var lastMediaItemIndex: Int = -1
     private var artistLoadJob: Job? = null
     private var artistLoadMediaId: String? = null
     private var wasPlayingBeforeHoldSeek = false
@@ -105,6 +128,7 @@ class PlaybackViewModel(
                             mediaItem: MediaItem?,
                             reason: Int,
                         ) {
+                            consumeQueueOnForwardStep()
                             syncFromPlayer()
                         }
 
@@ -188,6 +212,15 @@ class PlaybackViewModel(
             }
     }
 
+    /** Drops the front queued song once the player has advanced into its slot. Previous/restart never moves forward. */
+    private fun consumeQueueOnForwardStep() {
+        val newIndex = player?.currentMediaItemIndex ?: return
+        if (isForwardStep(lastMediaItemIndex, newIndex) && queuedFiles.isNotEmpty()) {
+            queuedFiles.removeAt(0)
+        }
+        lastMediaItemIndex = newIndex
+    }
+
     private fun libraryMediaItem(
         uri: Uri,
         title: String,
@@ -234,10 +267,45 @@ class PlaybackViewModel(
     fun playLibraryFile(
         file: DocumentFile,
         siblings: List<DocumentFile>,
-    ) {
+    ): List<DocumentFile> {
         val index = siblings.indexOfFirst { it.uri == file.uri }
-        if (index == -1) return
+        if (index == -1) return emptyList()
+        val previousQueue = queuedFiles.toList()
         startLibraryPlayback(siblings, index)
+        return previousQueue
+    }
+
+    /**
+     * Long-press on a library file: splices it into the live timeline after the current item and any songs already
+     * queued. With no library track playing, it just starts playing the file like a tap.
+     */
+    fun addToQueue(
+        file: DocumentFile,
+        siblings: List<DocumentFile>,
+    ): QueueResult {
+        val p = player
+        if (p == null || _uiState.value.mode != PlaybackMode.LIBRARY) {
+            playLibraryFile(file, siblings)
+            return QueueResult.StartedPlaying
+        }
+        if (queuedFiles.size >= MAX_QUEUE_SIZE) return QueueResult.QueueFull
+        spliceIntoQueue(p, file)
+        return QueueResult.Added(queuedFiles.size)
+    }
+
+    /** Re-queues [files] right after the current item, in order. */
+    fun restoreQueue(files: List<DocumentFile>) {
+        val p = player ?: return
+        files.forEach { spliceIntoQueue(p, it) }
+    }
+
+    private fun spliceIntoQueue(
+        p: Player,
+        file: DocumentFile,
+    ) {
+        val item = libraryMediaItem(file.uri, DirectoryLister.displayName(file), artist = null)
+        p.addMediaItem(p.currentMediaItemIndex + 1 + queuedFiles.size, item)
+        queuedFiles.add(file)
     }
 
     fun togglePlayPause() {
@@ -333,6 +401,7 @@ class PlaybackViewModel(
     }
 
     fun playWhiteNoise(uri: Uri) {
+        queuedFiles.clear()
         player?.repeatMode = Player.REPEAT_MODE_ONE
         player?.volume = 1f
         player?.setMediaItem(
@@ -366,6 +435,7 @@ class PlaybackViewModel(
         queue: List<DocumentFile>,
         startIndex: Int,
     ) {
+        queuedFiles.clear()
         libraryLoadJob?.cancel()
         libraryLoadJob =
             viewModelScope.launch {
@@ -376,6 +446,7 @@ class PlaybackViewModel(
                     }
                 libraryQueue = queue
                 libraryIndex = startIndex
+                lastMediaItemIndex = startIndex
                 player?.repeatMode = Player.REPEAT_MODE_OFF
                 player?.volume = 1f
                 player?.setMediaItems(mediaItems, startIndex, C.TIME_UNSET)
