@@ -1,8 +1,10 @@
 package com.joshuawallis.jwplayer.ui.components
 
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
@@ -39,6 +43,7 @@ import com.joshuawallis.jwplayer.data.DirectoryListing
 
 private val ROW_HEIGHT = 48.dp
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FolderListView(
     listing: DirectoryListing,
@@ -47,6 +52,7 @@ fun FolderListView(
     onBackClick: () -> Unit,
     onFolderClick: (DocumentFile) -> Unit,
     onFileClick: (DocumentFile) -> Unit,
+    onAddToQueue: (DocumentFile) -> Unit,
     modifier: Modifier = Modifier,
     highlightedUri: Uri? = null,
     listState: LazyListState = rememberLazyListState(),
@@ -92,9 +98,19 @@ fun FolderListView(
                             Modifier
                                 .fillMaxWidth()
                                 .background(background)
-                                .clickable { onFileClick(file) }
-                                .semantics { contentDescription = "file ${DirectoryLister.displayName(file)}" }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .combinedClickable(
+                                    onClick = { onFileClick(file) },
+                                    onLongClick = { onAddToQueue(file) },
+                                ).semantics {
+                                    contentDescription = "file ${DirectoryLister.displayName(file)}"
+                                    customActions =
+                                        listOf(
+                                            CustomAccessibilityAction("Add to queue") {
+                                                onAddToQueue(file)
+                                                true
+                                            },
+                                        )
+                                }.padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.MusicNote, contentDescription = null, tint = foreground)

@@ -1,6 +1,7 @@
 package com.joshuawallis.jwplayer.ui.screens.main
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,23 +12,32 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.joshuawallis.jwplayer.playback.MAX_QUEUE_SIZE
 import com.joshuawallis.jwplayer.playback.POSITION_TICK_MS
 import com.joshuawallis.jwplayer.playback.PlaybackMode
 import com.joshuawallis.jwplayer.playback.PlaybackViewModel
+import com.joshuawallis.jwplayer.playback.QueueResult
 import kotlinx.coroutines.delay
 
 @Composable
@@ -42,6 +52,8 @@ fun MainScreen(
 ) {
     val uiState by playbackViewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+    var queueToConfirm by remember { mutableStateOf<List<DocumentFile>?>(null) }
 
     // Ticks the elapsed time only while a library track is playing and this screen is visible.
     LaunchedEffect(lifecycleOwner, uiState.mode, uiState.isPlaying) {
@@ -64,7 +76,19 @@ fun MainScreen(
                 currentFolderDoc = currentFolderDoc,
                 onFolderChange = onFolderChange,
                 highlightedUri = uiState.currentFileUri,
-                onFilePlay = { file, siblings -> playbackViewModel.playLibraryFile(file, siblings) },
+                onFilePlay = { file, siblings ->
+                    val previousQueue = playbackViewModel.playLibraryFile(file, siblings)
+                    if (previousQueue.isNotEmpty()) queueToConfirm = previousQueue
+                },
+                onAddToQueue = { file, siblings ->
+                    val message =
+                        when (val result = playbackViewModel.addToQueue(file, siblings)) {
+                            is QueueResult.Added -> "Added to queue (${result.count}/$MAX_QUEUE_SIZE)"
+                            QueueResult.QueueFull -> "Queue is full ($MAX_QUEUE_SIZE/$MAX_QUEUE_SIZE)"
+                            QueueResult.StartedPlaying -> null
+                        }
+                    if (message != null) Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                },
                 scrollPositions = folderScrollPositions,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -90,6 +114,31 @@ fun MainScreen(
             onHoldSeekTick = playbackViewModel::applyHoldSeekTick,
             onEndHoldSeekNormally = playbackViewModel::endHoldSeekNormally,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    queueToConfirm?.let { previousQueue ->
+        AlertDialog(
+            onDismissRequest = { queueToConfirm = null },
+            title = { Text("Clear queue?") },
+            confirmButton = {
+                TextButton(
+                    onClick = { queueToConfirm = null },
+                    modifier = Modifier.testTag("clear_queue_yes"),
+                ) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        playbackViewModel.restoreQueue(previousQueue)
+                        queueToConfirm = null
+                    },
+                    modifier = Modifier.testTag("clear_queue_no"),
+                ) {
+                    Text("No")
+                }
+            },
         )
     }
 }

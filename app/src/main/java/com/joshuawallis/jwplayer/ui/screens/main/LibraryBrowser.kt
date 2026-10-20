@@ -40,6 +40,7 @@ fun LibraryBrowser(
     onFolderChange: (DocumentFile) -> Unit,
     highlightedUri: Uri?,
     onFilePlay: (DocumentFile, List<DocumentFile>) -> Unit,
+    onAddToQueue: (DocumentFile, List<DocumentFile>) -> Unit,
     scrollPositions: MutableMap<Uri, FolderScrollPosition>,
     modifier: Modifier = Modifier,
 ) {
@@ -119,6 +120,7 @@ fun LibraryBrowser(
             onBackClick = { parent?.let(onFolderChange) },
             onFolderClick = onFolderChange,
             onFileClick = { file -> onFilePlay(file, listing.files) },
+            onAddToQueue = { file -> onAddToQueue(file, listing.files) },
             highlightedUri = highlightedUri,
             listState = listState,
             modifier = modifier.fillMaxSize(),
