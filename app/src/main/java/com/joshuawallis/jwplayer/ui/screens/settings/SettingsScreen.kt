@@ -149,6 +149,7 @@ fun SettingsScreen(
                                     soundMenuExpanded = false
                                     releaseReplacedGrant(context, oldUri = whiteNoiseUri, newUri = sound.uri)
                                     onWhiteNoiseChosen(sound.uri)
+                                    if (whiteNoisePlaying) playbackViewModel.playWhiteNoise(sound.uri, sound.displayName)
                                 },
                             )
                         }
