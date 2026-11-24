@@ -82,10 +82,10 @@ fun MiniPlayer(
 
         Spacer(Modifier.height(4.dp))
 
-        val elapsed = formatTime(uiState.positionMs)
+        val elapsed = formatTime(uiState.positionMs, uiState.durationMs)
         val elapsedDisplay =
             if (uiState.durationMs > 0) {
-                "$elapsed / ${formatTime(uiState.durationMs)}"
+                "$elapsed / ${formatTime(uiState.durationMs, uiState.durationMs)}"
             } else {
                 elapsed
             }
@@ -163,12 +163,33 @@ fun MiniPlayer(
     }
 }
 
-internal fun formatTime(ms: Long): String {
-    val totalSeconds = (ms / 1000).coerceAtLeast(0)
+private const val ONE_HOUR_MS = 60 * 60 * 1000L
+
+/**
+ * Formats a playback time for display.
+ *
+ * Uses `MM:SS` when both the time and the track's duration are under one hour,
+ * and `H:MM:SS` once either one reaches an hour. Basing the choice on the duration too
+ * keeps elapsed and total times in the same format, and keeps the format steady for the
+ * whole of a long track instead of switching mid-play.
+ * A [durationMs] of 0 means the duration is unknown, so only the time itself decides.
+ *
+ * Examples:
+ * - `formatTime(42_000)` -> `"00:42"`
+ * - `formatTime(3_599_000)` -> `"59:59"`
+ * - `formatTime(3_909_000)` -> `"1:05:09"`
+ * - `formatTime(positionMs = 125_000, durationMs = 4_000_000)` -> `"0:02:05"`
+ */
+internal fun formatTime(
+    positionMs: Long,
+    durationMs: Long = 0L,
+): String {
+    val totalSeconds = (positionMs / 1000).coerceAtLeast(0)
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
-    return if (hours > 0) {
+    val showHours = positionMs >= ONE_HOUR_MS || durationMs >= ONE_HOUR_MS
+    return if (showHours) {
         "%d:%02d:%02d".format(hours, minutes, seconds)
     } else {
         "%02d:%02d".format(minutes, seconds)
