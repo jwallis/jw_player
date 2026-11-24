@@ -17,6 +17,11 @@ class FormattingTest {
     }
 
     @Test
+    fun `formatTime includes hours once an hour has elapsed`() {
+        assertEquals("1:00:05", formatTime(3_605_000))
+    }
+
+    @Test
     fun `titleFromFileName strips the file extension`() {
         assertEquals("Song", DirectoryLister.titleFromFileName("Song.mp3"))
     }
