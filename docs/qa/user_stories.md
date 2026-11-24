@@ -208,6 +208,16 @@ As a user, I want tapping the seek bar to jump to the position I tapped, regardl
 - Tapping (or drag-releasing) the seek bar computes the seek target from the currently playing track's duration, not the duration of the first track played this session.
 - This holds after switching between tracks of different lengths within the same app session, without needing to restart the app.
 
+### PLAYER-030: Show total track time next to elapsed time
+**Jira Issue ID:** JWP-44
+As a user, I want to see the total length of the track next to the elapsed time, not just how far I've gotten.
+
+**Acceptance Criteria:**
+- When the track's duration is known, the elapsed time text shows "\<elapsed\> / \<total\>" (e.g. "1:02 / 3:45").
+- Both the elapsed and total time switch from MM:SS to H:MM:SS once the time reaches an hour.
+- If the duration isn't yet known, only the elapsed time is shown (no "/ total" suffix).
+- The accessibility label for the elapsed time text reflects the same "\<elapsed\> / \<total\>" (or elapsed-only) value.
+
 ## Epic: White Noise
 
 ### PLAYER-020: Select white noise file
