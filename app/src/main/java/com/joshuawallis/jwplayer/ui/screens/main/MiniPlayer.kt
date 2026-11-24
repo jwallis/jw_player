@@ -83,15 +83,21 @@ fun MiniPlayer(
         Spacer(Modifier.height(4.dp))
 
         val elapsed = formatTime(uiState.positionMs)
+        val elapsedDisplay =
+            if (uiState.durationMs > 0) {
+                "$elapsed / ${formatTime(uiState.durationMs)}"
+            } else {
+                elapsed
+            }
         Text(
-            text = elapsed,
+            text = elapsedDisplay,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .testTag("elapsed_time_text")
-                    .semantics { contentDescription = "Elapsed time $elapsed" },
+                    .semantics { contentDescription = "Elapsed time $elapsedDisplay" },
         )
 
         Spacer(Modifier.height(4.dp))
@@ -159,9 +165,14 @@ fun MiniPlayer(
 
 internal fun formatTime(ms: Long): String {
     val totalSeconds = (ms / 1000).coerceAtLeast(0)
-    val minutes = totalSeconds / 60
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
 }
 
 @Composable
